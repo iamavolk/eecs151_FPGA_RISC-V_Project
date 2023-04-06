@@ -1,6 +1,6 @@
-module branch_comp {
+module branch_comp #(
     parameter N = 32
-}
+)
 (
     input [N-1:0] br_data0, br_data1,
     input BrUn,
@@ -10,7 +10,7 @@ module branch_comp {
 reg BrLt;
 
 wire b0 = br_data0[N-1];
-wire b1 = br_data1[N-1] 
+wire b1 = br_data1[N-1];
 
 always @(*) begin
     if (BrUn || ~(b0 || b1))        // unsigned or 2 positive 2's complement
