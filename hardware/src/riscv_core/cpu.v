@@ -127,5 +127,22 @@ module cpu #(
    // TODO: Your code to implement a fully functioning RISC-V core
    // Add as many modules as you want
    // Feel free to move the memory modules around
+  
+   // PC
+   wire [DWIDTH-1:0]      pc_to_mem;
+   REGISTER_R_CE #(.N(DWIDTH))
+   pc  (.q(pc_to_mem),
+        .d(),
+        .rst(rst),
+        .ce(1'b1),
+        .clk(clk));
+
+    assign pc_to_mem = bios_addra;
+    assign pc_to_mem = imem_addrb;
+
+    mux2 #(.N(DWIDTH))
+    pc_30_mux (.in0(),
+               .in1(),
+               .out());
 
 endmodule
