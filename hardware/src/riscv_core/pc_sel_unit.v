@@ -1,15 +1,22 @@
 module pc_sel_unit(
-    input [5:0] dec_instr_code,
+    input [15:0] instr_hex,
     input BrEq, BrLt, is_jal_id,
-    output PCSel
+    output [1:0] PCSel
 );
+    localparam HBEQ = 16'h0064;
+    localparam HBNE = 16'h4064;
+    localparam HBLT = 16'h8064;
+    localparam HBGE = 16'hC064;
+    localparam HBLTU = 16'h0074;
+    localparam HBGEU = 16'h4074;
     `include "instr.vh"
+
     wire br_jalr;
     assign br_jalr =
-	(dec_instr_code == BEQ && BrEq) ||
-	(dec_instr_code == BNE && ~BrEq) ||
-	((dec_instr_code == BLT || dec_instr_code == BLTU) && BrLt) ||
-	((dec_instr_code == BGE || dec_instr_code == BGEU) && ~BrLt) ||
+	(dec_instr_code == HBEQ && BrEq) ||
+	(dec_instr_code == HBNE && ~BrEq) ||
+	((dec_instr_code == HBLT || dec_instr_code == HBLTU) && BrLt) ||
+	((dec_instr_code == HBGE || dec_instr_code == HBGEU) && ~BrLt) ||
 	(dec_instr_code == JALR);
 
    assign PCSel =
