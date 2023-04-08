@@ -190,15 +190,12 @@ module cpu #(
 
     // Control ROM
     wire [CWIDTH-1:0] ctrl_encoded;
-    //
-    //
-    //
     control_unit
     control(.dec_instr_code(rom_idx),
 	    .hex_instr_code(ctrl_encoded));
 
     //wire RegWEn = ctrl_encoded[0];
-    wire ImmSel_ID = ctrl_encoded[3:1];
+    //wire ImmSel_ID = ctrl_encoded[3:1];
     //wire BrLUn = ctrl_encoded[4];
     //wire ASel = ctrl_encoded[5];
     //wire BSel = ctrl_encoded[6];
@@ -211,8 +208,10 @@ module cpu #(
     mux2 #(.N(CWIDTH))
     zero_ctrl_mux (.in0(ctrl_encoded),
                    .in1(CTRL_KILL),
-                   .sel(),
+                   .sel(1'b0),
                    .out(ctrl_ID));
+
+    wire [2:0] ImmSel_ID = ctrl_ID[3:1];
 
     ////////////////////////////////////////////////////
     //
@@ -282,13 +281,22 @@ module cpu #(
     //
     ////////////////////////////////////////////////////
     
+    //wire RegWEn = ctrl_encoded[0];
+    //wire ImmSel_ID = ctrl_encoded[3:1];
+    wire BrLUn = ctrl_X[4];
+    wire ASel = ctrl_X[5];
+    wire BSel = ctrl_X[6];
+    wire [4:0] ALUSel_X = ctrl_X[10:7];
+    wire MemRW = ctrl_X[11];
+    //wire WBSel = ctrl_encoded[13:12];
+    
     // Branch Comp
     wire BrEq_res;
     wire BrLt_res;
     branch_comp #(.N(DWIDTH))
     br_comp (.br_data0(rs1_X),
              .br_data1(rs2_X),
-             .BrUn(),
+             .BrUn(BrLUn),
              .BrEq(BrEq_res),
              .BrLt(BrLt_res));
 
@@ -331,12 +339,12 @@ module cpu #(
                 .in1(imm_X),        
                 .sel(1'b0),          // BSel  
                 .out(alu_B));
-
+    // ALU
     wire alu_res;
     alu #(.N(DWIDTH))
           .A(alu_A),
           .B(alu_B),
-          .ALUSel(),                //  from ctrl_X
+          .ALUSel(ALUSel_X),                
           .ALURes(alu_res));
 
     
@@ -367,10 +375,10 @@ module cpu #(
                .ce(1'b1),
                .clk(clk));
 
-    wire [DWIDTH-1:0] ;                    // CSR commit point? 1 cycle before the data is written
+    wire [DWIDTH-1:0] csr_WB;                    // CSR commit point? 1 cycle before the data is written
     REGISTER_R_CE #(.N(DWIDTH))
-    csr_X_WB (.q(),
-              .d(),
+    csr_X_WB (.q(csr_WB),
+              .d(csr_X),
               .rst(rst),
               .ce(1'b1),
               .clk(clk));
@@ -391,22 +399,34 @@ module cpu #(
              .ce(1'b1),
              .clk(clk));
 
-
     ////////////////////////////////////////////////////
     //
     //     WB Stage begin 
     //
     ////////////////////////////////////////////////////
 
+    wire RegWEn = ctrl_WB[0];
+    //wire ImmSel_ID = ctrl_encoded[3:1];
+    //wire BrLUn = ctrl_X[4];
+    //wire ASel = ctrl_X[5];
+    //wire BSel = ctrl_X[6];
+    //wire ALUSel_X = ctrl_X[10:7];
+    //wire MemRW = ctrl_X[11];
+    wire [1:0] WBSel = ctrl_WB[13:12];
+
+    wire [DWIDTH-1:0] mem_output;
+
+
     wire [DWIDTH-1:0] wb_res;
     mux3 #(.N(DWIDTH))
     csr_mux_X (.in0(pc_X + 4),
                .in1(alu_res),
-               .in2(),                     // Mem output
-               .sel(),                     // WBSel
+               .in2(mem_output),                     // Mem output
+               .sel(WBSel),                     // WBSel
                .out(wb_res));
     
     assign wa = instr_WB[11:7];
     assign wd = wb_res;
+    assign we = RegWEn;
 
 endmodule
