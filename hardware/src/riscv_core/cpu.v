@@ -10,11 +10,12 @@ module cpu #(
     input serial_in,
     output serial_out
 );
-
+    `include "instr.vh"
+    `include "opcode.vh"
     localparam DWIDTH = 32;
     localparam BEWIDTH = DWIDTH / 8;
     localparam CWIDTH = 16;
-    localparam CTRL_KILL = 16'b0; 
+    localparam CTRL_KILL = 16'b0;
     
     // BIOS Memory
     // Synchronous read: read takes one cycle
@@ -132,9 +133,10 @@ module cpu #(
   
     // PC
     wire [DWIDTH-1:0] pc_IF;
+    wire [DWIDTH-1:0] pc_mux_out;
     REGISTER_R_CE #(.N(DWIDTH))
     pc_reg  (.q(pc_IF),
-             .d(...),
+             .d(pc_mux_out),
              .rst(rst),
              .ce(1'b1),
              .clk(clk));
@@ -152,20 +154,21 @@ module cpu #(
               .clk(clk));
     
     // Cycle counter
-    wire [DWIDTH-1:0] cyc_ctr;
+    wire [DWIDTH-1:0] cycle_ctr_d, cycle_ctr_q;
     REGISTER_R_CE #(.N(DWIDTH))
-    cycle_ctr (.q(),
-               .d(),
-               .rst(rst),
-               .ce(1'b1),
-               .clk(clk));
+    cycle_ctr_reg (.q(cycle_ctr_q),
+                   .d(cycle_ctr_d),
+                   .rst(rst),
+                   .ce(1'b1),
+                   .clk(clk));
+
+    assign cycle_ctr_d = rst ? 32'b0 : cycle_ctr_q + 1;
 
     ////////////////////////////////////////////////////
     //
     //     ID Stage begin
     //
     ////////////////////////////////////////////////////
-
 
     // Instr
     wire instr_ID;
@@ -190,13 +193,14 @@ module cpu #(
              .imm_sel(ImmSel_ID)),
              .imm(imm_ID));
 
+    wire [DWIDTH-1:0] pc_ID_plus_jal_imm;
+    assign pc_ID_plus_jal_imm = pc_ID + imm_ID;
     
     // Control Decoder
     wire rom_idx;
     control_decode #(.N(DWIDTH))
     ctrl_dec (.instr(instr_ID)),
               .ROMIn(rom_idx));
-
 
     // Control ROM
     wire [CWIDTH-1:0] ctrl_encoded;
@@ -222,7 +226,6 @@ module cpu #(
                    .out(ctrl_ID));
 
     wire [2:0] ImmSel_ID = ctrl_ID[3:1];
-
 
     ////////////////////////////////////////////////////
     //
@@ -313,12 +316,12 @@ module cpu #(
 
     // PC Sel unit     
     wire [1:0] PCSel;
-    wire is_jal_id = 
-    pc_sel_unit (.dec_instr_code(), 
+    wire is_jal_id = (ctrl_ID == JAL);
+    pc_sel_unit (.instr_hex(ctrl_X), 
                  .is_jal_id(is_jal_id),
                  .BrEq(BrEq_res),
                  .BrLt(BrLt_res),
-                 .PCSel(PCSel_X));
+                 .PCSel(PCSel));
 
     // CSR mux 
     wire csr_X;
@@ -348,30 +351,29 @@ module cpu #(
     wire alu_A;
     alu_A_mux #(.N(DWIDTH))
                 .in0(fw_a),
-                .in1(pc_X),        
-                .sel(1'b0),          // ASel  
+                .in1(pc_X),
+                .sel(1'b0),
                 .out(alu_A));
     
     // BSel mux
     wire alu_B;
     alu_B_mux #(.N(DWIDTH))
                 .in0(fw_b),
-                .in1(imm_X),        
-                .sel(1'b0),          // BSel  
+                .in1(imm_X),
+                .sel(1'b0),
                 .out(alu_B));
+
     // ALU
     wire alu_res;
     alu #(.N(DWIDTH))
           .A(alu_A),
           .B(alu_B),
-          .ALUSel(ALUSel_X),                
+          .ALUSel(ALUSel_X),
           .ALURes(alu_res));
 
-    
-    /////
-    //     BIOS, DMEM, IMEM, IO connections
-    /////
-
+    /////////////////////////////////////////
+    ///     BIOS, DMEM, IMEM, IO connections
+    /////////////////////////////////////////
 
     ////////////////////////////////////////////////////
     //
@@ -395,7 +397,7 @@ module cpu #(
                .ce(1'b1),
                .clk(clk));
 
-    wire [DWIDTH-1:0] csr_WB;                    // CSR commit point? 1 cycle before the data is written
+    wire [DWIDTH-1:0] csr_WB;
     REGISTER_R_CE #(.N(DWIDTH))
     csr_X_WB (.q(csr_WB),
               .d(csr_X),
@@ -434,22 +436,27 @@ module cpu #(
     //wire MemRW = ctrl_X[11];
     wire [1:0] WBSel = ctrl_WB[13:12];
 
-
     wire [DWIDTH-1:0] mem_output;
-
 
     wire [DWIDTH-1:0] wb_res;
     mux3 #(.N(DWIDTH))
     csr_mux_X (.in0(pc_X + 4),
                .in1(alu_res),
-               .in2(mem_output),                     // Mem output
-               .sel(WBSel),                     // WBSel
+               .in2(mem_output),
+               .sel(WBSel),
                .out(wb_res));
     
     assign wa = instr_WB[11:7];
     assign wd = wb_res;
     assign we = RegWEn;
 
-        
-
+    mux3 #(.N(DWIDTH))
+    pc_sel_mux (.in0(pc_IF + 4),
+                .in1(pc_ID_plus_jal_imm),
+                .in2(alu_res),
+                .sel(PCSel),
+                .out(pc_mux_out));
+    
+    assign csr_we = (instr_WB[6:0] == OPC_CSR) ? 1'b1 : 1'b0;
+    assign csr_din = csr_WB;
 endmodule

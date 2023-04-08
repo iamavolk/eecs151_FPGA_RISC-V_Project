@@ -3,13 +3,13 @@ module pc_sel_unit(
     input BrEq, BrLt, is_jal_id,
     output [1:0] PCSel
 );
+    `include "instr.vh"
     localparam HBEQ = 16'h0064;
     localparam HBNE = 16'h4064;
     localparam HBLT = 16'h8064;
     localparam HBGE = 16'hC064;
     localparam HBLTU = 16'h0074;
     localparam HBGEU = 16'h4074;
-    `include "instr.vh"
 
     wire br_jalr;
     assign br_jalr =
