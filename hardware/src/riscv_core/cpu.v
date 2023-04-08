@@ -216,8 +216,8 @@ module cpu #(
               .ce(1'b1),
               .clk(clk));
 
-    wire [DWIDTH-1:0] ctrl_X;
-    REGISTER_R_CE #(.N(DWIDTH))
+    wire [CWIDTH-1:0] ctrl_X;
+    REGISTER_R_CE #(.N(CWIDTH))
     ctrl_ID_X (.q(ctrl_X),
                .d(ctrl_ID),
                .rst(rst),
@@ -264,7 +264,6 @@ module cpu #(
              .ce(1'b1),
              .clk(clk));
 
-
     ////////////////////////////////////////////////////
     //
     //     X Stage begin
@@ -272,12 +271,14 @@ module cpu #(
     ////////////////////////////////////////////////////
     
     // Branch Comp
+    wire BrEq_res;
+    wire BrLt_res;
     branch_comp #(.N(DWIDTH))
     br_comp (.br_data0(rs1_X),
              .br_data1(rs2_X),
              .BrUn(),
-             .BrEq(),
-             .BrLt());
+             .BrEq(BrEq_res),
+             .BrLt(BrLt_res));
 
     // CSR mux 
     wire csr_X;
@@ -288,5 +289,112 @@ module cpu #(
                .out(csr_X));
     
     // FW-X_mux_A
+    wire fw_a;
+    fw_a_mux #(.N(DWIDTH))
+               .in0(rs1_X),
+               .in1({32'b0}),        // Forwarding from WB stage
+               .sel(1'b0),           // FW_A selector from FORWARDING UNIT
+               .out(fw_a));
     
+    // FW-X_mux_B
+    wire fw_b;
+    fw_b_mux #(.N(DWIDTH))
+               .in0(rs2_X),
+               .in1({32'b0}),        // Forwarding from WB stage
+               .sel(1'b0),           // FW_B selector from FORWARDING UNIT
+               .out(fw_b));
+    
+    // ASel mux
+    wire alu_A;
+    alu_A_mux #(.N(DWIDTH))
+                .in0(fw_a),
+                .in1(pc_X),        
+                .sel(1'b0),          // ASel  
+                .out(alu_A));
+    
+    // BSel mux
+    wire alu_B;
+    alu_B_mux #(.N(DWIDTH))
+                .in0(fw_b),
+                .in1(imm_X),        
+                .sel(1'b0),          // BSel  
+                .out(alu_B));
+
+    wire alu_res;
+    alu #(.N(DWIDTH))
+          .A(alu_A),
+          .B(alu_B),
+          .ALUSel(),                //  from ctrl_X
+          .ALURes(alu_res));
+
+    
+    /////
+    //     BIOS, DMEM, IMEM, IO connections
+    /////
+
+
+    ////////////////////////////////////////////////////
+    //
+    //     X Stage end
+    //
+    ////////////////////////////////////////////////////
+
+    wire [DWIDTH-1:0] alu_res_X;
+    REGISTER_R_CE #(.N(DWIDTH))
+    alu_X_WB (.q(alu_res_X),
+              .d(alu_res),
+              .rst(rst),
+              .ce(1'b1),
+              .clk(clk));
+    
+    wire [CWIDTH-1:0] ctrl_WB;
+    REGISTER_R_CE #(.N(CWIDTH))
+    ctrl_X_WB (.q(ctrl_WB),
+               .d(ctrl_X),
+               .rst(rst),
+               .ce(1'b1),
+               .clk(clk));
+
+    wire [DWIDTH-1:0] ;                    // CSR commit point? 1 cycle before the data is written
+    REGISTER_R_CE #(.N(DWIDTH))
+    csr_X_WB (.q(),
+              .d(),
+              .rst(rst),
+              .ce(1'b1),
+              .clk(clk));
+
+    wire [DWIDTH-1:0] instr_WB;
+    REGISTER_R_CE #(.N(DWIDTH))
+    instr_X_WB (.q(instr_WB),
+                .d(instr_X),
+                .rst(rst),
+                .ce(1'b1),
+                .clk(clk));
+
+    wire [DWIDTH-1:0] pc_WB;
+    REGISTER_R_CE #(.N(DWIDTH))
+    pc_X_WB (.q(pc_WB),
+             .d(pc_X),
+             .rst(rst),
+             .ce(1'b1),
+             .clk(clk));
+
+
+    ////////////////////////////////////////////////////
+    //
+    //     WB Stage begin 
+    //
+    ////////////////////////////////////////////////////
+
+    wire [DWIDTH-1:0] wb_res;
+    mux3 #(.N(DWIDTH))
+    csr_mux_X (.in0(pc_X + 4),
+               .in1(alu_res),
+               .in2(),                     // Mem output
+               .sel(),                     // WBSel
+               .out(wb_res));
+    
+    assign wa = instr_WB[11:7];
+    assign wd = wb_res;
+
 endmodule
