@@ -2,8 +2,8 @@ module control_decode(
     input [31:0] instr,
     output [5:0] ROMIn
 );
-`include opcode.vh
-`include instr.vh
+`include "opcode.vh"
+`include "instr.vh"
 
 reg [5:0] ROMIn;
 
