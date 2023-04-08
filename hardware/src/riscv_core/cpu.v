@@ -177,7 +177,7 @@ module cpu #(
     wire imm_ID;
     imm_generator #(.N(DWIDTH))
     imm_gen (.instr(instr_ID)),
-             .imm_sel()),
+             .imm_sel(ImmSel_ID)),
              .imm(imm_ID));
 
     
@@ -189,10 +189,22 @@ module cpu #(
 
 
     // Control ROM
-    wire ctrl_encoded;
+    wire [CWIDTH-1:0] ctrl_encoded;
     //
     //
-    // 
+    //
+    control_unit
+    control(.dec_instr_code(rom_idx),
+	    .hex_instr_code(ctrl_encoded));
+
+    //wire RegWEn = ctrl_encoded[0];
+    wire ImmSel_ID = ctrl_encoded[3:1];
+    //wire BrLUn = ctrl_encoded[4];
+    //wire ASel = ctrl_encoded[5];
+    //wire BSel = ctrl_encoded[6];
+    //wire ALUSel = ctrl_encoded[10:7];
+    //wire MemRW = ctrl_encoded[11];
+    //wire WBSel = ctrl_encoded[13:12];
 
     // Control ID
     wire ctrl_ID;
@@ -263,7 +275,7 @@ module cpu #(
              .rst(rst),
              .ce(1'b1),
              .clk(clk));
-
+    
     ////////////////////////////////////////////////////
     //
     //     X Stage begin
