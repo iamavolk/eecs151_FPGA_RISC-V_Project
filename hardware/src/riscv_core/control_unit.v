@@ -1,5 +1,7 @@
 module control_unit(
     input [15:0] hex,
+    input [5:0] instr_code,
+
     output RegWEn,
     output [2:0] ImmSel,
     output BrLUn, // used for load unsigned and branch unsigned
