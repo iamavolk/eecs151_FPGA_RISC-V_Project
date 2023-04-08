@@ -142,6 +142,7 @@ module cpu #(
     assign bios_addra = pc_IF[11:0];
     assign imem_addrb = pc_IF[13:0];
  
+    // PC pipeline register IF-ID
     wire [DWIDTH-1:0] pc_ID;
     REGISTER_R_CE #(.N(DWIDTH))
     pc_IF_ID (.q(pc_ID),
@@ -149,7 +150,16 @@ module cpu #(
               .rst(rst),
               .ce(1'b1),
               .clk(clk));
-     
+    
+    // Cycle counter
+    wire [DWIDTH-1:0] cyc_ctr;
+    REGISTER_R_CE #(.N(DWIDTH))
+    cycle_ctr (.q(),
+               .d(),
+               .rst(rst),
+               .ce(1'b1),
+               .clk(clk));
+
     ////////////////////////////////////////////////////
     //
     //     ID Stage begin
@@ -303,8 +313,8 @@ module cpu #(
 
     // PC Sel unit     
     wire [1:0] PCSel;
-    wire is_jal_id;
-    pc_sel_unit (.dec_instr_code(ctrl_X), 
+    wire is_jal_id = 
+    pc_sel_unit (.dec_instr_code(), 
                  .is_jal_id(is_jal_id),
                  .BrEq(BrEq_res),
                  .BrLt(BrLt_res),
