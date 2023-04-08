@@ -1,6 +1,6 @@
 module pc_sel_unit(
     input [5:0] dec_instr_code,
-    input BrEq, BrLt,
+    input BrEq, BrLt, is_jal_id,
     output PCSel
 );
     `include "instr.vh"
@@ -13,7 +13,7 @@ module pc_sel_unit(
 	(dec_instr_code == JALR);
 
    assign PCSel =
-	(dec_instr_code == JAL) ? 2'b01 :
+	(is_jal_id) ? 2'b01 :
 	(br_jalr ? 2'b10 : 2'b00);
 
 endmodule

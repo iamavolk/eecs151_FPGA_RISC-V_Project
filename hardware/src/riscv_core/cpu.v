@@ -213,6 +213,7 @@ module cpu #(
 
     wire [2:0] ImmSel_ID = ctrl_ID[3:1];
 
+
     ////////////////////////////////////////////////////
     //
     //     ID Stage end
@@ -299,6 +300,15 @@ module cpu #(
              .BrUn(BrLUn),
              .BrEq(BrEq_res),
              .BrLt(BrLt_res));
+
+    // PC Sel unit     
+    wire [1:0] PCSel;
+    wire is_jal_id;
+    pc_sel_unit (.dec_instr_code(ctrl_X), 
+                 .is_jal_id(is_jal_id),
+                 .BrEq(BrEq_res),
+                 .BrLt(BrLt_res),
+                 .PCSel(PCSel_X));
 
     // CSR mux 
     wire csr_X;
@@ -414,6 +424,7 @@ module cpu #(
     //wire MemRW = ctrl_X[11];
     wire [1:0] WBSel = ctrl_WB[13:12];
 
+
     wire [DWIDTH-1:0] mem_output;
 
 
@@ -428,5 +439,7 @@ module cpu #(
     assign wa = instr_WB[11:7];
     assign wd = wb_res;
     assign we = RegWEn;
+
+        
 
 endmodule
