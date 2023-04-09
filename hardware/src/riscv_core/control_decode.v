@@ -7,8 +7,8 @@ module control_decode(
 
 reg [5:0] ROMIn;
 
-wire opcode = instr[6:0];
-wire func3 = instr[14:12];
+wire [6:0] opcode = instr[6:0];
+wire [2:0] func3 = instr[14:12];
 //wire func7 = instr[31:25];
 wire func2 = instr[30];
 
@@ -28,6 +28,7 @@ always @(*) begin
 		    else if (func2 == `FNC2_SRA) ROMIn = `SRA;
 		`FNC_OR: ROMIn = `OR;
 		`FNC_AND: ROMIn = `AND;
+		default: ROMIn = 6'bxxxxxx;
             endcase
         end
 	`OPC_LOAD: begin
@@ -37,6 +38,7 @@ always @(*) begin
 		`FNC_LW: ROMIn = `LW;
 		`FNC_LBU: ROMIn = `LBU;
 		`FNC_LHU: ROMIn = `LHU;
+		default: ROMIn = 6'bxxxxxx;
 	    endcase
 	end
 	`OPC_ARI_ITYPE: begin
@@ -51,6 +53,7 @@ always @(*) begin
                     else if (func2 == `FNC2_SRA) ROMIn = `SRAI;
                 `FNC_OR: ROMIn = `ORI;
                 `FNC_AND: ROMIn = `ANDI;
+		default: ROMIn = 6'bxxxxxx;
 	    endcase
 	end
 	`OPC_STORE: begin
@@ -58,6 +61,7 @@ always @(*) begin
 		`FNC_SB: ROMIn = `SB;
 		`FNC_SH: ROMIn = `SH;
 		`FNC_SW: ROMIn = `SW;
+                default: ROMIn = 6'bxxxxxx;
 	    endcase
 	end
 	`OPC_BRANCH: begin
@@ -68,13 +72,14 @@ always @(*) begin
 		`FNC_BGE: ROMIn = `BGE;
 		`FNC_BLTU: ROMIn = `BLTU;
 		`FNC_BGEU: ROMIn = `BGEU;
+                default: ROMIn = 6'bxxxxxx;
 	    endcase
 	end
 	`OPC_AUIPC: ROMIn = `AUIPC;
         `OPC_LUI: ROMIn = `LUI;
         `OPC_JAL: ROMIn = `JAL;
         `OPC_JALR: ROMIn = `JALR;
-	default: ROMIn = 6'bx;	// undefined
+	default: ROMIn = 6'bxxxxxx;	// undefined
     endcase
 end
 
