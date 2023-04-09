@@ -11,6 +11,7 @@ module pc_sel_unit(
     localparam HBGE = 16'hC064;
     localparam HBLTU = 16'h0074;
     localparam HBGEU = 16'h4074;
+    localparam HJALR = 16'h2041;
 
     wire br_jalr;
     assign br_jalr =
@@ -18,7 +19,7 @@ module pc_sel_unit(
 	(instr_hex == HBNE && ~BrEq) ||
 	((instr_hex == HBLT || instr_hex == HBLTU) && BrLt) ||
 	((instr_hex == HBGE || instr_hex == HBGEU) && ~BrLt) ||
-	(instr_hex == `JALR);
+	(instr_hex == HJALR);
 
     assign PCSel =
 	 (is_jal_id) ? 2'b01 :

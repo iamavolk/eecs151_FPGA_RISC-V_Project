@@ -15,10 +15,10 @@ wire [N-1:0] s_type =
 	instr[31:25],
 	instr[11:7]};
 
-wire [N-1:0] i_type = instr[31:20];
+wire [11:0] i_type = instr[31:20];
 
 wire [N-1:0] u_type =
-	instr[31:12] << 12;
+	{instr[31:12], {12{1'b0}}};
 
 wire [N-1:0] b_type =
 	{{N-13{instr[31]}},
