@@ -14,10 +14,10 @@ always @(*) begin
     case (ALUSel)
         4'b0000: res = A + B;               // add
         4'b0001: res = A << B[4:0];         // sll
-        4'b0011: 
-            if (A < B) begin 
+        4'b0011:
+            if (A < B) begin
                 res = {31'b0, 1'b1};                    // sltu
-            end                             
+            end
         4'b0010:
             if ($signed(A) < $signed(B)) begin 
                 res = {31'b0, 1'b1};                    // slt
@@ -32,7 +32,7 @@ always @(*) begin
         // 4'b1011: // mulhu
         4'b1100: res = A - B;                           // sub
         4'b1101: res = A >>> B[4:0];                    // sra
-        4'b1111: res = B;                               // bsel  
+        4'b1111: res = B;                               // bsel
     endcase
 end
 
