@@ -32,13 +32,16 @@ always @(*) begin
         // 4'b1011: // mulhu
         4'b1100: res = A - B;                           // sub
         4'b1101: res = A >>> B[4:0];                    // sra
-<<<<<<< HEAD
-        4'b1111: res = B;                               // bsel
-	default: res = {32{1'bx}};			// undefined
-=======
+//<<<<<<< HEAD
+//        4'b1111: res = B;                               // bsel
+//	default: res = {32{1'bx}};			// undefined
+//=======
         4'b1111: res = B;                               // bsel  
         default: res = {N{1'b0}};
->>>>>>> ce73806 (avr: CPU progress)
+//<<<<<<< HEAD
+//>>>>>>> ce73806 (avr: CPU progress)
+//=======
+//>>>>>>> ce73806 (avr: CPU progress)
     endcase
 end
 

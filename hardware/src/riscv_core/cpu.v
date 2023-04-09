@@ -231,6 +231,7 @@ module cpu #(
     jal_unit (.instr(instr_ID),
 		.pc(pc_ID),
 		.jal_pc(pc_ID_plus_jal_imm));
+    // J-type imm. gen.
 
 
     // Control Decoder
