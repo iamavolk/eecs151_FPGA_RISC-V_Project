@@ -204,18 +204,18 @@ module cpu #(
     wire [DWIDTH-1:0] instr_ID;
     wire instr_kill;
     mux2 #(.N(DWIDTH))
-    pc_31_mux (.in0(instr_BIOS_IMEM),
-               .in1(`INST_NOP),
-               .sel(instr_kill),
-               .out(instr_ID));
+    instr_kill_mux (.in0(instr_BIOS_IMEM),
+                    .in1(`INST_NOP),
+                    .sel(instr_kill),
+                    .out(instr_ID));
 
-    //assign instr_kill = (ctrl_X == CTRL_KILL) ? 1'b1 : 1'b0;
-    assign instr_kill = (instr_X[6:0] == 7'b1101111) ? 1'b1 : 1'b0;
+    assign instr_kill = (instr_X[6:0] == 7'b1101111) ? 1'b1 : 1'b0;   // Need to handle BRANCH TAKEN!!!!!
+                                                                      // Currently only handles JAL
 
     assign ra1 = instr_ID[19:15];
     assign ra2 = instr_ID[24:20];
 
-    // Immediate Select
+    // Immediate Generator 
     wire [DWIDTH-1:0] imm_ID;
     imm_generator #(.N(DWIDTH))
     imm_gen (.instr(instr_ID),
@@ -223,8 +223,10 @@ module cpu #(
              .imm(imm_ID));
 
     wire [DWIDTH-1:0] pc_ID_plus_jal_imm;
-    assign pc_ID_plus_jal_imm = pc_ID + imm_ID;
-    
+    //assign pc_ID_plus_jal_imm = pc_ID + imm_ID;
+    // J-type imm. gen.
+
+
     // Control Decoder
     wire [ROM_IDX_WIDTH-1:0] rom_idx;
     control_decode
@@ -256,7 +258,7 @@ module cpu #(
                    .sel(zero_ctrl),
                    .out(ctrl_ID));
 
-    assign zero_ctrl = PCSel[0];
+    assign zero_ctrl = (PCSel == 2'b00) ? 1'b0 : 1'b1;                     
     wire [1:0] ImmSel_ID = ctrl_encoded[2:1];
 
     ////////////////////////////////////////////////////
@@ -404,27 +406,25 @@ module cpu #(
               .ALUSel(ALUSel_X),
               .ALURes(alu_res));
 
-    /////////////////////////////////////////
-    ///     BIOS, DMEM, IMEM, IO connections
-    /////////////////////////////////////////
-    //always @(*) begin
-    //    case(alu_res[31:28])
-    //        4'b00x1: mem_res = dmem_addra;
-    //        4'b001x: mem_res = imem_addra; 
-    //        4'b0100: mem_res = bios_addrb;
-    //        //4'b1000: 
-    //        default: mem_res = 32'b0;
-    //    endcase
-    //end
-
     //assign mem_output = mem_res;
+    //mux3 #(.N(DWIDTH))
+    //mem_sel_mux (.in0(dmem_douta),
+    //             .in1(bios_doutb),
+    //             .in2({24'b0, uart_rx_data_out}),
+    //             .sel(alu_res[31:30]),
+    //             .out(mem_res));
+
+    
     wire [DWIDTH-1:0] mem_res;
-    mux3 #(.N(DWIDTH))
-    mem_sel_mux (.in0(dmem_douta),
-                 .in1(bios_doutb),
-                 .in2({24'b0, uart_rx_data_out}),
-                 .sel(alu_res[31:30]),
-                 .out(mem_res));
+    mem_output #(.WIDTH(DWIDTH))
+    mem_res_unit (.dmem_out(dmem_douta),
+                  .bios_out(bios_doutb),
+                  .alu_addr(alu_res),
+                  .uart_rx_valid(uart_rx_data_out_valid),
+                  .uart_tx_ready(uart_tx_data_in_ready),
+                  .cyc_ctr(cycle_ctr_q),
+                  .instr_ctr(32'b0),                        // TODD
+                  .mem_result(mem_res));
 
     assign dmem_wbea =
         ((MemRW == 1'b1) && 
@@ -433,18 +433,27 @@ module cpu #(
         4'b0000;
 
     assign imem_wbea =
-        (MemRW == 1'b1) && 
+        ((MemRW == 1'b1) && 
         ((alu_res[31:28] == 4'b0010) || (alu_res[31:28] == 4'b0011)) && 
-        (pc_X[30] == 1'b1) ? 
+        (pc_X[30] == 1'b1)) ? 
         4'b1111 :
         4'b0000;
 
-    //reg [BEWIDTH:0] imem_write_en; 
-    //always @(*) begin
-    //    if (pc_X[30] == 1'b1)
-    //        imem_write_en = 4'b1111;    // Need to add masks for LOAD Byte, Half, etc.
-    //end
-    //assign imem_wbea = imem_write_en;    
+    assign dmem_addra = alu_res[13:0];
+    assign bios_addrb = alu_res[11:0];
+    assign imem_addra = alu_res[13:0];
+    
+    assign dmem_dina = rs2_X;
+    assign imem_dina = rs2_X;
+
+    wire [7:0] uart_tx_in;
+    mux2 #(.N(WIDTH))
+    tx_mux (.in0(uart_tx_in),
+            .in1(rs2_X[7:0]),
+            .sel((alu_res[31] == 1'b1) && (alu_res[4] == 1'b1)),
+            .out(uart_tx_in));
+    
+    assign uart_tx_data_in = uart_tx_in;
 
     ////////////////////////////////////////////////////
     //

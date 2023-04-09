@@ -21,8 +21,11 @@ module pc_sel_unit(
 	((instr_hex == HBGE || instr_hex == HBGEU) && ~BrLt) ||
 	(instr_hex == HJALR);
 
-    assign PCSel =
-	 (is_jal_id) ? 2'b01 :
-	 (br_jalr ? 2'b10 : 2'b00);
+    //assign PCSel =
+	// (is_jal_id) ? 2'b01 :
+	// (br_jalr ? 2'b10 : 2'b00);
 
+    assign PCSel = 
+        (br_jalr) ? 2'b10 : 
+        (is_jal_id ? 2'b01 : 2'b00);
 endmodule
