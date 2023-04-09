@@ -55,5 +55,4 @@
 // I-jump-type
 `define JALR	6'd36
 
-
 `endif
