@@ -17,6 +17,7 @@ module cpu #(
     localparam CWIDTH = 16;
     localparam ROM_IDX_WIDTH = 6;
     localparam CTRL_KILL = 16'b0;
+    localparam HJAL = 16'h2069;
     
     // BIOS Memory
     // Synchronous read: read takes one cycle
@@ -256,7 +257,7 @@ module cpu #(
                    .out(ctrl_ID));
 
     assign zero_ctrl = PCSel[0];
-    wire [2:0] ImmSel_ID = ctrl_encoded[3:1];
+    wire [1:0] ImmSel_ID = ctrl_encoded[2:1];
 
     ////////////////////////////////////////////////////
     //
@@ -331,7 +332,7 @@ module cpu #(
     wire BrLUn = ctrl_X[4];
     wire ASel = ctrl_X[5];
     wire BSel = ctrl_X[6];
-    wire [4:0] ALUSel_X = ctrl_X[10:7];
+    wire [3:0] ALUSel_X = ctrl_X[10:7];
     wire MemRW = ctrl_X[11];
     //wire WBSel = ctrl_encoded[13:12];
     
@@ -347,13 +348,13 @@ module cpu #(
 
     // PC Sel unit     
     wire [1:0] PCSel;
-    wire is_jal_id = (ctrl_ID == `JAL);
+    wire is_jal_id = (ctrl_ID == HJAL);
     pc_sel_unit 
     pc_sel_logic (.instr_hex(ctrl_X), 
-                 .is_jal_id(is_jal_id),
-                 .BrEq(BrEq_res),
-                 .BrLt(BrLt_res),
-                 .PCSel(PCSel));
+                  .is_jal_id(is_jal_id),
+                  .BrEq(BrEq_res),
+                  .BrLt(BrLt_res),
+                  .PCSel(PCSel));
 
     // CSR mux 
     wire [DWIDTH-1:0] csr_X;
@@ -406,20 +407,37 @@ module cpu #(
     /////////////////////////////////////////
     ///     BIOS, DMEM, IMEM, IO connections
     /////////////////////////////////////////
-    reg [DWIDTH-1:0] mem_res;
-    always @(*) begin
-        case(alu_res[31:28])
-            4'b00x1: mem_res = dmem_addra;
-            4'b001x: mem_res = imem_addra; 
-            4'b0100: mem_res = bios_addrb;
-            //4'b1000: 
-        endcase
-    end
+    //always @(*) begin
+    //    case(alu_res[31:28])
+    //        4'b00x1: mem_res = dmem_addra;
+    //        4'b001x: mem_res = imem_addra; 
+    //        4'b0100: mem_res = bios_addrb;
+    //        //4'b1000: 
+    //        default: mem_res = 32'b0;
+    //    endcase
+    //end
 
-    assign mem_output = mem_res;
+    //assign mem_output = mem_res;
+    wire [DWIDTH-1:0] mem_res;
+    mux3 #(.N(DWIDTH))
+    mem_sel_mux (.in0(dmem_douta),
+                 .in1(bios_doutb),
+                 .in2({24'b0, uart_rx_data_out}),
+                 .sel(alu_res[31:30]),
+                 .out(mem_res));
 
-    assign dmem_wbea = ((MemRW == 1'b1) && (alu_res[31:28] == 4'b00x1)) ? 4'b1111 : 4'b0000;
-    assign imem_wbea = ((MemRW == 1'b1) && (alu_res[31:28] == 4'b001x) && (pc_X[30] == 1'b1)) ? 4'b1111 : 4'b0000;
+    assign dmem_wbea =
+        ((MemRW == 1'b1) && 
+        ((alu_res[31:28] == 4'b0001) || (alu_res[31:28] == 4'b0011))) ?
+        4'b1111 :
+        4'b0000;
+
+    assign imem_wbea =
+        (MemRW == 1'b1) && 
+        ((alu_res[31:28] == 4'b0010) || (alu_res[31:28] == 4'b0011)) && 
+        (pc_X[30] == 1'b1) ? 
+        4'b1111 :
+        4'b0000;
 
     //reg [BEWIDTH:0] imem_write_en; 
     //always @(*) begin
