@@ -1,3 +1,5 @@
+`include "instr.vh"
+`include "opcode.vh"
 module cpu #(
     parameter CPU_CLOCK_FREQ = 50_000_000,
     parameter RESET_PC = 32'h4000_0000,
@@ -10,11 +12,10 @@ module cpu #(
     input serial_in,
     output serial_out
 );
-    `include "instr.vh"
-    `include "opcode.vh"
     localparam DWIDTH = 32;
     localparam BEWIDTH = DWIDTH / 8;
     localparam CWIDTH = 16;
+    localparam ROM_IDX_WIDTH = 6;
     localparam CTRL_KILL = 16'b0;
     
     // BIOS Memory
@@ -61,7 +62,7 @@ module cpu #(
     wire [IMEM_AWIDTH-1:0] imem_addra, imem_addrb;
     wire [DWIDTH-1:0]      imem_douta, imem_doutb;
     wire [DWIDTH-1:0]      imem_dina, imem_dinb;
-    wire [BEWIDTH:0]       imem_wbea, imem_wbeb;
+    wire [BEWIDTH-1:0]       imem_wbea, imem_wbeb;
     wire                   imem_ena, imem_enb;
     SYNC_RAM_DP_WBE #(.AWIDTH(IMEM_AWIDTH),
                       .DWIDTH(DWIDTH))
@@ -76,6 +77,26 @@ module cpu #(
           .wbe1(imem_wbeb),
           .en1(imem_enb),
           .clk(clk));
+
+    //////////////////////////////////////////////////
+    ////  
+    ////    Mem Specific Signals Begin
+    ////
+    //////////////////////////////////////////////////
+    
+    assign bios_ena = 1'b1;
+    assign bios_enb = 1'b1;
+    assign dmem_ena = 1'b1;
+    assign imem_ena = 1'b1;
+    assign imem_enb = 1'b1;
+
+    assign imem_wbeb = 4'b0;   
+     
+    //////////////////////////////////////////////////
+    ////  
+    ////    Mem Specific Signals End
+    ////
+    //////////////////////////////////////////////////
 
     // Register file
     // Asynchronous read: read data is available in the same cycle
@@ -171,35 +192,42 @@ module cpu #(
     ////////////////////////////////////////////////////
 
     // Instr
-    wire instr_ID;
+    wire [DWIDTH-1:0] instr_BIOS_IMEM;
     mux2 #(.N(DWIDTH))
     pc_30_mux (.in0(imem_doutb),
                .in1(bios_douta),
                .sel(pc_ID[30]),
+               .out(instr_BIOS_IMEM));
+
+    // Instr kill ? 
+    wire [DWIDTH-1:0] instr_ID;
+    wire instr_kill;
+    mux2 #(.N(DWIDTH))
+    pc_31_mux (.in0(instr_BIOS_IMEM),
+               .in1(`INST_NOP),
+               .sel(instr_kill),
                .out(instr_ID));
 
-    //mux2 #(.N(DWIDTH))
-    //pc_31_mux (.in0(),
-    //           .in1(),
-    //           .out());
+    //assign instr_kill = (ctrl_X == CTRL_KILL) ? 1'b1 : 1'b0;
+    assign instr_kill = (instr_X[6:0] == 7'b1101111) ? 1'b1 : 1'b0;
 
-    assign ra1 = instr_ID[19:15]
-    assign ra2 = instr_ID[24:20]
+    assign ra1 = instr_ID[19:15];
+    assign ra2 = instr_ID[24:20];
 
     // Immediate Select
-    wire imm_ID;
+    wire [DWIDTH-1:0] imm_ID;
     imm_generator #(.N(DWIDTH))
-    imm_gen (.instr(instr_ID)),
-             .imm_sel(ImmSel_ID)),
+    imm_gen (.instr(instr_ID),
+             .imm_sel(ImmSel_ID),
              .imm(imm_ID));
 
     wire [DWIDTH-1:0] pc_ID_plus_jal_imm;
     assign pc_ID_plus_jal_imm = pc_ID + imm_ID;
     
     // Control Decoder
-    wire rom_idx;
-    control_decode #(.N(DWIDTH))
-    ctrl_dec (.instr(instr_ID)),
+    wire [ROM_IDX_WIDTH-1:0] rom_idx;
+    control_decode
+    ctrl_dec (.instr(instr_ID),
               .ROMIn(rom_idx));
 
     // Control ROM
@@ -218,14 +246,17 @@ module cpu #(
     //wire WBSel = ctrl_encoded[13:12];
 
     // Control ID
-    wire ctrl_ID;
+    wire [CWIDTH-1:0] ctrl_ID;
+    wire zero_ctrl;
     mux2 #(.N(CWIDTH))
     zero_ctrl_mux (.in0(ctrl_encoded),
                    .in1(CTRL_KILL),
-                   .sel(1'b0),
+                   //.sel(PCSel[0]),
+                   .sel(zero_ctrl),
                    .out(ctrl_ID));
 
-    wire [2:0] ImmSel_ID = ctrl_ID[3:1];
+    assign zero_ctrl = PCSel[0];
+    wire [2:0] ImmSel_ID = ctrl_encoded[3:1];
 
     ////////////////////////////////////////////////////
     //
@@ -260,7 +291,7 @@ module cpu #(
     wire [DWIDTH-1:0] csr_uimm_X;
     REGISTER_R_CE #(.N(DWIDTH))
     csr_uImm_ID_X (.q(csr_uimm_X),
-                .d({27{1'b0},instr_ID[19:15]}),
+                .d({27'b0,instr_ID[19:15]}),
                 .rst(rst),
                 .ce(1'b1),
                 .clk(clk));
@@ -316,15 +347,16 @@ module cpu #(
 
     // PC Sel unit     
     wire [1:0] PCSel;
-    wire is_jal_id = (ctrl_ID == JAL);
-    pc_sel_unit (.instr_hex(ctrl_X), 
+    wire is_jal_id = (ctrl_ID == `JAL);
+    pc_sel_unit 
+    pc_sel_logic (.instr_hex(ctrl_X), 
                  .is_jal_id(is_jal_id),
                  .BrEq(BrEq_res),
                  .BrLt(BrLt_res),
                  .PCSel(PCSel));
 
     // CSR mux 
-    wire csr_X;
+    wire [DWIDTH-1:0] csr_X;
     mux2 #(.N(DWIDTH))
     csr_mux_X (.in0(rs1_X),
                .in1(csr_uimm_X),
@@ -332,48 +364,69 @@ module cpu #(
                .out(csr_X));
     
     // FW-X_mux_A
-    wire fw_a;
-    fw_a_mux #(.N(DWIDTH))
-               .in0(rs1_X),
-               .in1({32'b0}),        // Forwarding from WB stage
-               .sel(1'b0),           // FW_A selector from FORWARDING UNIT
-               .out(fw_a));
+    wire [DWIDTH-1:0] fw_a;
+    mux2 #(.N(DWIDTH))
+    fw_a_mux (.in0(rs1_X),
+              .in1({32'b0}),        // Forwarding from WB stage
+              .sel(1'b0),           // FW_A selector from FORWARDING UNIT
+              .out(fw_a));
     
     // FW-X_mux_B
-    wire fw_b;
-    fw_b_mux #(.N(DWIDTH))
-               .in0(rs2_X),
-               .in1({32'b0}),        // Forwarding from WB stage
-               .sel(1'b0),           // FW_B selector from FORWARDING UNIT
-               .out(fw_b));
+    wire [DWIDTH-1:0] fw_b;
+    mux2 #(.N(DWIDTH))
+    fw_b_mux (.in0(rs2_X),
+              .in1({32'b0}),        // Forwarding from WB stage
+              .sel(1'b0),           // FW_B selector from FORWARDING UNIT
+              .out(fw_b));
     
     // ASel mux
-    wire alu_A;
-    alu_A_mux #(.N(DWIDTH))
-                .in0(fw_a),
-                .in1(pc_X),
-                .sel(1'b0),
-                .out(alu_A));
+    wire [DWIDTH-1:0] alu_A;
+    mux2 #(.N(DWIDTH))
+    alu_A_mux (.in0(fw_a),
+               .in1(pc_X),
+               .sel(ASel),
+               .out(alu_A));
     
     // BSel mux
-    wire alu_B;
-    alu_B_mux #(.N(DWIDTH))
-                .in0(fw_b),
-                .in1(imm_X),
-                .sel(1'b0),
-                .out(alu_B));
+    wire [DWIDTH-1:0] alu_B;
+    mux2 #(.N(DWIDTH))
+    alu_B_mux (.in0(fw_b),
+               .in1(imm_X),
+               .sel(BSel),
+               .out(alu_B));
 
     // ALU
-    wire alu_res;
+    wire [DWIDTH-1:0] alu_res;
     alu #(.N(DWIDTH))
-          .A(alu_A),
-          .B(alu_B),
-          .ALUSel(ALUSel_X),
-          .ALURes(alu_res));
+    alu_unit (.A(alu_A),
+              .B(alu_B),
+              .ALUSel(ALUSel_X),
+              .ALURes(alu_res));
 
     /////////////////////////////////////////
     ///     BIOS, DMEM, IMEM, IO connections
     /////////////////////////////////////////
+    reg [DWIDTH-1:0] mem_res;
+    always @(*) begin
+        case(alu_res[31:28])
+            4'b00x1: mem_res = dmem_addra;
+            4'b001x: mem_res = imem_addra; 
+            4'b0100: mem_res = bios_addrb;
+            //4'b1000: 
+        endcase
+    end
+
+    assign mem_output = mem_res;
+
+    assign dmem_wbea = ((MemRW == 1'b1) && (alu_res[31:28] == 4'b00x1)) ? 4'b1111 : 4'b0000;
+    assign imem_wbea = ((MemRW == 1'b1) && (alu_res[31:28] == 4'b001x) && (pc_X[30] == 1'b1)) ? 4'b1111 : 4'b0000;
+
+    //reg [BEWIDTH:0] imem_write_en; 
+    //always @(*) begin
+    //    if (pc_X[30] == 1'b1)
+    //        imem_write_en = 4'b1111;    // Need to add masks for LOAD Byte, Half, etc.
+    //end
+    //assign imem_wbea = imem_write_en;    
 
     ////////////////////////////////////////////////////
     //
@@ -440,11 +493,11 @@ module cpu #(
 
     wire [DWIDTH-1:0] wb_res;
     mux3 #(.N(DWIDTH))
-    csr_mux_X (.in0(pc_X + 4),
-               .in1(alu_res),
-               .in2(mem_output),
-               .sel(WBSel),
-               .out(wb_res));
+    wb_mux (.in0(pc_X + 4),
+            .in1(alu_res),
+            .in2(mem_output),
+            .sel(WBSel),
+            .out(wb_res));
     
     assign wa = instr_WB[11:7];
     assign wd = wb_res;
@@ -457,6 +510,6 @@ module cpu #(
                 .sel(PCSel),
                 .out(pc_mux_out));
     
-    assign csr_we = (instr_WB[6:0] == OPC_CSR) ? 1'b1 : 1'b0;
+    assign csr_we = (instr_WB[6:0] == `OPC_CSR) ? 1'b1 : 1'b0;
     assign csr_din = csr_WB;
 endmodule

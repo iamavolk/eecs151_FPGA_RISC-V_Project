@@ -1,9 +1,9 @@
+`include "instr.vh"
+`include "opcode.vh"
 module control_decode(
     input [31:0] instr,
     output [5:0] ROMIn
 );
-`include "opcode.vh"
-`include "instr.vh"
 
 reg [5:0] ROMIn;
 
@@ -14,66 +14,66 @@ wire func2 = instr[30];
 
 always @(*) begin
     case (opcode)
-	OPC_ARI_RTYPE: begin
+	`OPC_ARI_RTYPE: begin
 	    case (func3)
-	        FNC_ADD_SUB:
-                    if (func2 == FNC2_ADD) ROMIn = ADD;
-                    else if (func2 == FNC2_SUB) ROMIn= SUB;
-                FNC_SLL: ROMIn = SLL;
-                FNC_SLT: ROMIn = SLT;
-                FNC_SLTU: ROMIn = SLTU;
-                FNC_XOR: ROMIn = XOR;
-                FNC_SRL_SRA:
-		   if (func2 == FCN2_SRL) ROMIn = SRL;
-		    else if (func2 == FNC2_SRA) ROMIn = SRA;
-		FCN_OR: ROMIn = OR;
-		FCN_AND: ROMIn = AND;
+	        `FNC_ADD_SUB:
+                    if (func2 == `FNC2_ADD) ROMIn = `ADD;
+                    else if (func2 == `FNC2_SUB) ROMIn= `SUB;
+                `FNC_SLL: ROMIn = `SLL;
+                `FNC_SLT: ROMIn = `SLT;
+                `FNC_SLTU: ROMIn = `SLTU;
+                `FNC_XOR: ROMIn = `XOR;
+                `FNC_SRL_SRA:
+		   if (func2 == `FNC2_SRL) ROMIn = `SRL;
+		    else if (func2 == `FNC2_SRA) ROMIn = `SRA;
+		`FNC_OR: ROMIn = `OR;
+		`FNC_AND: ROMIn = `AND;
             endcase
         end
-	OPC_LOAD: begin
+	`OPC_LOAD: begin
 	    case (func3)
-		FCN_LB: ROMIn = LB;
-		FCN_LH: ROMIn = LH;
-		FCN_LW: ROMIn = LW;
-		FCN_LBU: ROMIn = LBU;
-		FCN_LHU: ROMIn = LHU;
+		`FNC_LB: ROMIn = `LB;
+		`FNC_LH: ROMIn = `LH;
+		`FNC_LW: ROMIn = `LW;
+		`FNC_LBU: ROMIn = `LBU;
+		`FNC_LHU: ROMIn = `LHU;
 	    endcase
 	end
-	OPC_ARI_ITYPE: begin
+	`OPC_ARI_ITYPE: begin
             case (func3)
-                FNC_ADD_SUB: ROMIn = ADDI;
-                FNC_SLL: ROMIn = SLLI;
-                FNC_SLT: ROMIn = SLTI;
-                FNC_SLTU: ROMIn = SLTIU;
-                FNC_XOR: ROMIn = XORI;
-                FNC_SRL_SRA:
-                    if (func2 == FCN2_SRL) ROMIn = SRLI;
-                    else if (func2 == FNC2_SRA) ROMIn = SRAI;
-                FCN_OR: ROMIn = ORI;
-                FCN_AND: ROMIn = ANDI;
+                `FNC_ADD_SUB: ROMIn = `ADDI;
+                `FNC_SLL: ROMIn = `SLLI;
+                `FNC_SLT: ROMIn = `SLTI;
+                `FNC_SLTU: ROMIn = `SLTIU;
+                `FNC_XOR: ROMIn = `XORI;
+                `FNC_SRL_SRA:
+                    if (func2 == `FNC2_SRL) ROMIn = `SRLI;
+                    else if (func2 == `FNC2_SRA) ROMIn = `SRAI;
+                `FNC_OR: ROMIn = `ORI;
+                `FNC_AND: ROMIn = `ANDI;
 	    endcase
 	end
-	OPC_STORE: begin
+	`OPC_STORE: begin
 	    case (func3)
-		FCN_SB: ROMIn = SB;
-		FCN_SH: ROMIn = SH;
-		FCN_SW: ROMIn = SW;
+		`FNC_SB: ROMIn = `SB;
+		`FNC_SH: ROMIn = `SH;
+		`FNC_SW: ROMIn = `SW;
 	    endcase
 	end
-	OPC_BRANCH: begin
+	`OPC_BRANCH: begin
 	    case (func3)
-		FCN_BEQ: ROMIn = BEQ;
-		FCN_BNE: ROMIn = BNE;
-		FCN_BLT: ROMIn = BLT;
-		FCN_BGE: ROMIn = BGE;
-		FCN_BLTU: ROMIn = BLTU;
-		FCN_BGEU: ROMIn = BGEU;
+		`FNC_BEQ: ROMIn = `BEQ;
+		`FNC_BNE: ROMIn = `BNE;
+		`FNC_BLT: ROMIn = `BLT;
+		`FNC_BGE: ROMIn = `BGE;
+		`FNC_BLTU: ROMIn = `BLTU;
+		`FNC_BGEU: ROMIn = `BGEU;
 	    endcase
 	end
-	OPC_AUIPC: ROMIn = AUIPC;
-        OPC_LUI: ROMIn = LUI;
-        OPC_JAL: ROMIn = JAL;
-        OPC_JALR: ROMIn = JALR;
+	`OPC_AUIPC: ROMIn = `AUIPC;
+        `OPC_LUI: ROMIn = `LUI;
+        `OPC_JAL: ROMIn = `JAL;
+        `OPC_JALR: ROMIn = `JALR;
 	default: ROMIn = 6'bx;	// undefined
     endcase
 end

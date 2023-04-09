@@ -1,3 +1,4 @@
+//`include "instr.vh"
 module pc_sel_unit(
     input [15:0] instr_hex,
     input BrEq, BrLt, is_jal_id,
@@ -13,14 +14,14 @@ module pc_sel_unit(
 
     wire br_jalr;
     assign br_jalr =
-	(dec_instr_code == HBEQ && BrEq) ||
-	(dec_instr_code == HBNE && ~BrEq) ||
-	((dec_instr_code == HBLT || dec_instr_code == HBLTU) && BrLt) ||
-	((dec_instr_code == HBGE || dec_instr_code == HBGEU) && ~BrLt) ||
-	(dec_instr_code == JALR);
+	(instr_hex == HBEQ && BrEq) ||
+	(instr_hex == HBNE && ~BrEq) ||
+	((instr_hex == HBLT || instr_hex == HBLTU) && BrLt) ||
+	((instr_hex == HBGE || instr_hex == HBGEU) && ~BrLt) ||
+	(instr_hex == `JALR);
 
-   assign PCSel =
-	(is_jal_id) ? 2'b01 :
-	(br_jalr ? 2'b10 : 2'b00);
+    assign PCSel =
+	 (is_jal_id) ? 2'b01 :
+	 (br_jalr ? 2'b10 : 2'b00);
 
 endmodule
