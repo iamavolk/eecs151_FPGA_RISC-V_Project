@@ -19,7 +19,7 @@ always @(*) begin
                 res = {31'b0, 1'b1};                    // sltu
             end
         4'b0010:
-            if ($signed(A) < $signed(B)) begin 
+            if ($signed(A) < $signed(B)) begin
                 res = {31'b0, 1'b1};                    // slt
             end
         4'b0100: res = A ^ B;                           // xor
@@ -33,6 +33,7 @@ always @(*) begin
         4'b1100: res = A - B;                           // sub
         4'b1101: res = A >>> B[4:0];                    // sra
         4'b1111: res = B;                               // bsel
+	default: res = {32{1'bx}};			// undefined
     endcase
 end
 
