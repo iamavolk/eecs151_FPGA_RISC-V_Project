@@ -14,7 +14,7 @@ module uart_transmitter #(
     // See diagram in the lab guide
     localparam  SYMBOL_EDGE_TIME    =   CLOCK_FREQ / BAUD_RATE;
     localparam  CLOCK_COUNTER_WIDTH =   $clog2(SYMBOL_EDGE_TIME);
-    
+
     wire [9:0] tx_shift_d, tx_shift_q;
     wire tx_shift_ce;
 
@@ -30,7 +30,7 @@ module uart_transmitter #(
         .d(tx_shift_d),
         .q(tx_shift_q),
         .ce(tx_shift_ce),
-        .rst(rst),
+        .rst(reset),
         .clk(clk)
     );
 
@@ -70,8 +70,8 @@ module uart_transmitter #(
 
     assign clock_counter_rst = symbol_edge || reset || done;
     assign clock_counter_ce = start;
-    
-    assign symbol_edge = (clock_counter_value == (SYMBOL_EDGE_TIME - 1));
+
+    assign symbol_edge = ({{32-CLOCK_COUNTER_WIDTH{1'b0}}, clock_counter_value} == (SYMBOL_EDGE_TIME - 1));
     assign done = (bit_counter_value == 10) && symbol_edge;
 
     assign serial_out = bit_counter_value > 9 ? 1'b1: tx_shift_q[bit_counter_value];
