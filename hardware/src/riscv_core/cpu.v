@@ -358,7 +358,7 @@ module cpu #(
 
     // PC Sel unit     
     wire [1:0] PCSel;
-    wire is_jal_id = (ctrl_X == HJAL);
+    wire is_jal_id = (ctrl_encoded == HJAL);
     pc_sel_unit 
     pc_sel_logic (.instr_hex(ctrl_X), 
                   .is_jal_id(is_jal_id),

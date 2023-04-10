@@ -33,10 +33,10 @@ module debouncer #(
     generate
         for (i=0; i<WIDTH; i=i+1) begin: sat
             REGISTER_R_CE #(SAT_CNT_WIDTH) sat_reg (.q(sat_out[i]), .d(sat_in[i]), .rst(sat_reset[i]), .ce(sat_enable[i]), .clk(clk));
-            assign sat_enable[i] = ((sample_c_out == SAMPLE_CNT_MAX) && glitchy_signal[i]);
+            assign sat_enable[i] = (({16'b0, sample_c_out} == SAMPLE_CNT_MAX) && glitchy_signal[i]);
             not(sat_reset[i], glitchy_signal[i]);
-            assign sat_in[i] = (sat_out[i] == PULSE_CNT_MAX - 1) ? (sat_out[i]) : (sat_out[i] + 1);
-            assign debounced_signal[i] = (sat_out[i] == (PULSE_CNT_MAX - 1)) ? 1'b1 : 1'b0;
+            assign sat_in[i] = ({23'b0, sat_out[i]} == (PULSE_CNT_MAX - 1)) ? (sat_out[i]) : (sat_out[i] + 1);
+            assign debounced_signal[i] = ({23'b0, sat_out[i]} == (PULSE_CNT_MAX - 1)) ? 1'b1 : 1'b0;
         end
     endgenerate
 
