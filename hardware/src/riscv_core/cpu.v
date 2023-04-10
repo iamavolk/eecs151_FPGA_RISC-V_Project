@@ -362,7 +362,7 @@ module cpu #(
     // PC Sel unit     
     //wire [1:0] PCSel;
     //wire is_jal_id = (ctrl_encoded == HJAL);
-    wire is_jal_id = 1'b0;
+    //wire is_jal_id = 1'b0;
     pc_sel_unit 
     pc_sel_logic (.instr_hex(ctrl_X), 
                   .is_jal_id(is_jal_id),
@@ -555,7 +555,7 @@ module cpu #(
     pc_sel_mux (.in0(pc_IF + 1),                     // TODO: Find out later why +1 ? 
                 .in1(pc_ID_plus_jal_imm),
                 .in2(alu_res),
-                .sel(PCSel),
+                .sel(1'b0),
                 .out(pc_mux_out));
 
     assign csr_we = (instr_WB[6:0] == `OPC_CSR) ? 1'b1 : 1'b0;
