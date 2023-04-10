@@ -329,7 +329,7 @@ module cpu #(
     wire [DWIDTH-1:0] pc_X;
     REGISTER_R_CE #(.N(DWIDTH))
     pc_ID_X (.q(pc_X),
-             .d(rd1),
+             .d(pc_ID),
              .rst(rst),
              .ce(1'b1),
              .clk(clk));
@@ -541,7 +541,7 @@ module cpu #(
 
     wire [DWIDTH-1:0] wb_res;
     mux3 #(.N(DWIDTH))
-    wb_mux (.in0(pc_X + 4),
+    wb_mux (.in0(pc_WB + 1),                         // TODO:
             .in1(alu_res),
             .in2(mem_output),
             .sel(WBSel),
