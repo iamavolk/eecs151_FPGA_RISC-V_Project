@@ -536,7 +536,7 @@ module cpu #(
                 .in2(alu_res),
                 .sel(PCSel),
                 .out(pc_mux_out));
-    
+
     assign csr_we = (instr_WB[6:0] == `OPC_CSR) ? 1'b1 : 1'b0;
     assign csr_din = csr_WB;
 endmodule
