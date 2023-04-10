@@ -204,6 +204,7 @@ module cpu #(
     // Instr kill ? 
     wire [DWIDTH-1:0] instr_ID;
     wire instr_kill;
+    wire [DWIDTH-1:0] instr_X;
     mux2 #(.N(DWIDTH))
     instr_kill_mux (.in0(instr_BIOS_IMEM),
                     .in1(`INST_NOP),
@@ -218,6 +219,7 @@ module cpu #(
 
     // Immediate Generator 
     wire [DWIDTH-1:0] imm_ID;
+    wire [2:0] ImmSel_ID;
     imm_generator #(.N(DWIDTH))
     imm_gen (.instr(instr_ID),
              .imm_sel(ImmSel_ID),
@@ -265,9 +267,9 @@ module cpu #(
                    //.sel(PCSel[0]),
                    .sel(zero_ctrl),
                    .out(ctrl_ID));
-
+    wire [1:0] PCSel;
     assign zero_ctrl = (PCSel != 2'b00);
-    wire [1:0] ImmSel_ID = ctrl_encoded[2:1];
+    assign ImmSel_ID[1:0] = ctrl_encoded[2:1];
 
     ////////////////////////////////////////////////////
     //
@@ -291,7 +293,7 @@ module cpu #(
                .ce(1'b1),
                .clk(clk));
 
-    wire [DWIDTH-1:0] instr_X;
+    //wire [DWIDTH-1:0] instr_X;
     REGISTER_R_CE #(.N(DWIDTH))
     instr_ID_X (.q(instr_X),
                 .d(instr_ID),
@@ -358,7 +360,7 @@ module cpu #(
              .BrLt(BrLt));
 
     // PC Sel unit     
-    wire [1:0] PCSel;
+    //wire [1:0] PCSel;
     wire is_jal_id = (ctrl_encoded == HJAL);
     pc_sel_unit 
     pc_sel_logic (.instr_hex(ctrl_X), 
