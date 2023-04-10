@@ -4,7 +4,7 @@ module pc_sel_unit(
     input BrEq, BrLt, is_jal_id,
     output [1:0] PCSel
 );
-    `include "instr.vh"
+    //`include "instr.vh"
     localparam HBEQ = 16'h0064;
     localparam HBNE = 16'h4064;
     localparam HBLT = 16'h8064;
