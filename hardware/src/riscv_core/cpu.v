@@ -12,6 +12,7 @@ module cpu #(
     input serial_in,
     output serial_out
 );
+    localparam X0_ADDR = 5'b00000;
     localparam DWIDTH = 32;
     localparam BEWIDTH = DWIDTH / 8;
     localparam CWIDTH = 16;
@@ -545,7 +546,7 @@ module cpu #(
     
     assign wa = instr_WB[11:7];
     assign wd = wb_res;
-    assign we = RegWEn;
+    assign we = wa == X0_ADDR ? 1'b0 : RegWEn;
 
     mux3 #(.N(DWIDTH))
     pc_sel_mux (.in0(pc_IF + 4),
