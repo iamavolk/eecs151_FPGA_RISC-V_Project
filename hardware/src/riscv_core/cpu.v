@@ -228,11 +228,11 @@ module cpu #(
     // TODO Jal Unit check
 
     // jal unit
-    jal_unit (.instr(instr_ID),
-		.pc(pc_ID),
-		.jal_pc(pc_ID_plus_jal_imm));
+    jal_unit
+    j_imm_plus_pc_unit (.instr(instr_ID),
+                        .pc(pc_ID),
+		                .jal_pc(pc_ID_plus_jal_imm));
     // J-type imm. gen.
-
 
     // Control Decoder
     wire [ROM_IDX_WIDTH-1:0] rom_idx;
@@ -358,7 +358,7 @@ module cpu #(
 
     // PC Sel unit     
     wire [1:0] PCSel;
-    wire is_jal_id = (ctrl_ID == HJAL);
+    wire is_jal_id = (ctrl_ID === HJAL);
     pc_sel_unit 
     pc_sel_logic (.instr_hex(ctrl_X), 
                   .is_jal_id(is_jal_id),
@@ -455,7 +455,7 @@ module cpu #(
     assign imem_dina = rs2_X;
 
     wire [7:0] uart_tx_in;
-    mux2 #(.N(WIDTH))
+    mux2 #(.N(8))
     tx_mux (.in0(uart_tx_in),
             .in1(rs2_X[7:0]),
             .sel((alu_res[31] == 1'b1) && (alu_res[4] == 1'b1)),

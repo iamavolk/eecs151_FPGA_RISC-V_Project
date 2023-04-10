@@ -1,5 +1,5 @@
 module mem_output #(
-    parameter WIDTH = 32;
+    parameter WIDTH = 32
 ) (
     input  [WIDTH-1:0] dmem_out, 
     input  [WIDTH-1:0] bios_out,
@@ -16,7 +16,7 @@ module mem_output #(
     mux2 #(.N(WIDTH))
     ctr_mux (.in0(cyc_ctr),
              .in1(instr_ctr),
-             .sel(alu_addr[2])
+             .sel(alu_addr[2]),
              .out(ctr_value));
 
 
@@ -26,21 +26,21 @@ module mem_output #(
     mux2 #(.N(WIDTH))
     uart_mux (.in0(uart_ctrl),
               .in1(uart_incoming),
-              .sel(alu_addr[2])
+              .sel(alu_addr[2]),
               .out(uart_value));
 
     wire [WIDTH-1:0] io_value;
     mux2 #(.N(WIDTH))
     io_mux (.in0(uart_value),
             .in1(ctr_value),
-            .sel(alu_addr[4])
+            .sel(alu_addr[4]),
             .out(io_value));
 
     mux3 #(.N(WIDTH))
     mem_output_mux (.in0(dmem_out),
                     .in1(bios_out),
-                    .in2(io_value)
-                    .sel(alu_res[31:30])
+                    .in2(io_value),
+                    .sel(alu_addr[31:30]),
                     .out(mem_result));
 
 endmodule
