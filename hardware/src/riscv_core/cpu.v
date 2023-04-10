@@ -222,7 +222,7 @@ module cpu #(
     wire [2:0] ImmSel_ID;
     imm_generator #(.N(DWIDTH))
     imm_gen (.instr(instr_ID),
-             .imm_sel(ImmSel_ID),
+             .imm_sel(ImmSel_ID[1:0]),
              .imm(imm_ID));
 
     wire [DWIDTH-1:0] pc_ID_plus_jal_imm;
@@ -269,7 +269,7 @@ module cpu #(
                    .out(ctrl_ID));
     wire [1:0] PCSel;
     assign zero_ctrl = (PCSel != 2'b00);
-    assign ImmSel_ID[1:0] = ctrl_encoded[2:1];
+    assign ImmSel_ID = ctrl_encoded[3:1];
 
     ////////////////////////////////////////////////////
     //
@@ -361,7 +361,8 @@ module cpu #(
 
     // PC Sel unit     
     //wire [1:0] PCSel;
-    wire is_jal_id = (ctrl_encoded == HJAL);
+    //wire is_jal_id = (ctrl_encoded == HJAL);
+    wire is_jal_id = 1'b0;
     pc_sel_unit 
     pc_sel_logic (.instr_hex(ctrl_X), 
                   .is_jal_id(is_jal_id),
@@ -481,9 +482,9 @@ module cpu #(
     //
     ////////////////////////////////////////////////////
 
-    wire [DWIDTH-1:0] alu_res_X;
+    wire [DWIDTH-1:0] alu_res_WB;
     REGISTER_R_CE #(.N(DWIDTH))
-    alu_X_WB (.q(alu_res_X),
+    alu_X_WB (.q(alu_res_WB),
               .d(alu_res),
               .rst(rst),
               .ce(1'b1),
@@ -551,7 +552,7 @@ module cpu #(
     assign we = wa == X0_ADDR ? 1'b0 : RegWEn;
 
     mux3 #(.N(DWIDTH))
-    pc_sel_mux (.in0(pc_IF + 4),
+    pc_sel_mux (.in0(pc_IF + 1),                     // TODO: Find out later why +1 ? 
                 .in1(pc_ID_plus_jal_imm),
                 .in2(alu_res),
                 .sel(PCSel),
