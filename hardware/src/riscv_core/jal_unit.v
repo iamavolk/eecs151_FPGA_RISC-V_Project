@@ -5,7 +5,8 @@ module jal_unit(
 );
     wire [31:0] imm;
     assign imm =
-	{instr[31],
+	{11'b0,
+    instr[31],
 	instr[19:12],
 	instr[20],
 	instr[30:21],

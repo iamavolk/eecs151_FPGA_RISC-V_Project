@@ -430,6 +430,7 @@ module cpu #(
                   .alu_addr(alu_res),
                   .uart_rx_valid(uart_rx_data_out_valid),
                   .uart_tx_ready(uart_tx_data_in_ready),
+                  .uart_rx_out(uart_rx_data_out),
                   .cyc_ctr(cycle_ctr_q),
                   .instr_ctr(32'b0),                        // TODD
                   .mem_result(mem_res));
@@ -454,14 +455,22 @@ module cpu #(
     assign dmem_dina = rs2_X;
     assign imem_dina = rs2_X;
 
-    wire [7:0] uart_tx_in;
+    wire [7:0] uart_tx_in_d;
+    wire [7:0] uart_tx_in_q;
     mux2 #(.N(8))
-    tx_mux (.in0(uart_tx_in),
+    tx_mux (.in0(uart_tx_in_q),
             .in1(rs2_X[7:0]),
             .sel((alu_res[31] == 1'b1) && (alu_res[4] == 1'b1)),
-            .out(uart_tx_in));
-    
-    assign uart_tx_data_in = uart_tx_in;
+            .out(uart_tx_in_d));
+
+    REGISTER_R_CE #(.N(8))
+    uart_tx_reg (.q(uart_tx_in_q),
+                 .d(uart_tx_in_d),
+                 .rst(rst),
+                 .ce(1'b1),
+                 .clk(clk));    
+
+    assign uart_tx_data_in = uart_tx_in_d;
 
     ////////////////////////////////////////////////////
     //
