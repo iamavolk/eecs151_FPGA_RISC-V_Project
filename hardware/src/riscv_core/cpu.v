@@ -184,7 +184,7 @@ module cpu #(
                    .ce(1'b1),
                    .clk(clk));
 
-    assign cycle_ctr_d = rst ? 32'b0 : cycle_ctr_q + 1;
+    assign cycle_ctr_d = cycle_ctr_q + 1'b1;
 
     ////////////////////////////////////////////////////
     //
@@ -209,7 +209,7 @@ module cpu #(
                     .sel(instr_kill),
                     .out(instr_ID));
 
-    assign instr_kill = (instr_X[6:0] == 7'b1101111) ? 1'b1 : 1'b0;   // Need to handle BRANCH TAKEN!!!!!
+    assign instr_kill = (instr_X[6:0] == `OPC_JAL) ? 1'b1 : 1'b0;   // TODO Need to handle BRANCH TAKEN!!!!!
                                                                       // Currently only handles JAL
 
     assign ra1 = instr_ID[19:15];
@@ -224,7 +224,13 @@ module cpu #(
 
     wire [DWIDTH-1:0] pc_ID_plus_jal_imm;
     //assign pc_ID_plus_jal_imm = pc_ID + imm_ID;
-    // J-type imm. gen.
+    // J-type imm. gen
+    // TODO Jal Unit check
+
+    // jal unit
+    jal_unit (.instr(instr_ID),
+		.pc(pc_ID),
+		.jal_pc(pc_ID_plus_jal_imm));
 
 
     // Control Decoder
@@ -258,7 +264,7 @@ module cpu #(
                    .sel(zero_ctrl),
                    .out(ctrl_ID));
 
-    assign zero_ctrl = (PCSel == 2'b00) ? 1'b0 : 1'b1;                     
+    assign zero_ctrl = (PCSel != 2'b00);
     wire [1:0] ImmSel_ID = ctrl_encoded[2:1];
 
     ////////////////////////////////////////////////////
@@ -291,13 +297,14 @@ module cpu #(
                 .ce(1'b1),
                 .clk(clk));
 
-    wire [DWIDTH-1:0] csr_uimm_X;
+    wire [DWIDTH-1:0] csr_uimm_X, csr_uimm_X_d;
     REGISTER_R_CE #(.N(DWIDTH))
     csr_uImm_ID_X (.q(csr_uimm_X),
-                .d({27'b0,instr_ID[19:15]}),
+                .d(csr_uimm_X_d),
                 .rst(rst),
                 .ce(1'b1),
                 .clk(clk));
+    assign csr_uimm_X_d = {27'b0,instr_ID[19:15]};
 
     wire [DWIDTH-1:0] rs1_X;
     REGISTER_R_CE #(.N(DWIDTH))
@@ -339,14 +346,14 @@ module cpu #(
     //wire WBSel = ctrl_encoded[13:12];
     
     // Branch Comp
-    wire BrEq_res;
-    wire BrLt_res;
+    wire BrEq;
+    wire BrLt;
     branch_comp #(.N(DWIDTH))
     br_comp (.br_data0(rs1_X),
              .br_data1(rs2_X),
              .BrUn(BrLUn),
-             .BrEq(BrEq_res),
-             .BrLt(BrLt_res));
+             .BrEq(BrEq),
+             .BrLt(BrLt));
 
     // PC Sel unit     
     wire [1:0] PCSel;
@@ -354,8 +361,8 @@ module cpu #(
     pc_sel_unit 
     pc_sel_logic (.instr_hex(ctrl_X), 
                   .is_jal_id(is_jal_id),
-                  .BrEq(BrEq_res),
-                  .BrLt(BrLt_res),
+                  .BrEq(BrEq),
+                  .BrLt(BrLt),
                   .PCSel(PCSel));
 
     // CSR mux 
