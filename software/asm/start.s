@@ -26,6 +26,7 @@ _start:
                     # Now we check that x1 contains 500 and x2 contains 100
 
 # TODO: add more tests here
-li x2, 100          # Set an initial value of x2
+li x1, 100          # Set an initial value of x2
+li x11, 200
 
 #done: j done

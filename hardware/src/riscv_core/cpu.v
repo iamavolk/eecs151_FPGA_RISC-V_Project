@@ -411,19 +411,19 @@ module cpu #(
                .out(alu_B));
 
     // ALU
-    wire [DWIDTH-1:0] alu_res;
+    wire [DWIDTH-1:0] alu_res_X;
     alu #(.N(DWIDTH))
     alu_unit (.A(alu_A),
               .B(alu_B),
               .ALUSel(ALUSel_X),
-              .ALURes(alu_res));
+              .ALURes(alu_res_X));
 
     //assign mem_output = mem_res;
     //mux3 #(.N(DWIDTH))
     //mem_sel_mux (.in0(dmem_douta),
     //             .in1(bios_doutb),
     //             .in2({24'b0, uart_rx_data_out}),
-    //             .sel(alu_res[31:30]),
+    //             .sel(alu_res_X[31:30]),
     //             .out(mem_res));
 
     
@@ -431,7 +431,7 @@ module cpu #(
     mem_output #(.WIDTH(DWIDTH))
     mem_res_unit (.dmem_out(dmem_douta),
                   .bios_out(bios_doutb),
-                  .alu_addr(alu_res),
+                  .alu_addr(alu_res_X),
                   .uart_rx_valid(uart_rx_data_out_valid),
                   .uart_tx_ready(uart_tx_data_in_ready),
                   .uart_rx_out(uart_rx_data_out),
@@ -441,20 +441,20 @@ module cpu #(
 
     assign dmem_wbea =
         ((MemRW == 1'b1) && 
-        ((alu_res[31:28] == 4'b0001) || (alu_res[31:28] == 4'b0011))) ?
+        ((alu_res_X[31:28] == 4'b0001) || (alu_res_X[31:28] == 4'b0011))) ?
         4'b1111 :
         4'b0000;
 
     assign imem_wbea =
         ((MemRW == 1'b1) && 
-        ((alu_res[31:28] == 4'b0010) || (alu_res[31:28] == 4'b0011)) && 
+        ((alu_res_X[31:28] == 4'b0010) || (alu_res_X[31:28] == 4'b0011)) && 
         (pc_X[30] == 1'b1)) ? 
         4'b1111 :
         4'b0000;
 
-    assign dmem_addra = alu_res[13:0];
-    assign bios_addrb = alu_res[11:0];
-    assign imem_addra = alu_res[13:0];
+    assign dmem_addra = alu_res_X[15:2]; // page 12 spec
+    assign bios_addrb = alu_res_X[11:0];
+    assign imem_addra = alu_res_X[15:2]; // TODO: check
     
     assign dmem_dina = rs2_X;
     assign imem_dina = rs2_X;
@@ -464,7 +464,7 @@ module cpu #(
     mux2 #(.N(8))
     tx_mux (.in0(uart_tx_in_q),
             .in1(rs2_X[7:0]),
-            .sel((alu_res[31] == 1'b1) && (alu_res[4] == 1'b1)),
+            .sel((alu_res_X[31] == 1'b1) && (alu_res_X[4] == 1'b1)),
             .out(uart_tx_in_d));
 
     REGISTER_R_CE #(.N(8))
@@ -485,7 +485,7 @@ module cpu #(
     wire [DWIDTH-1:0] alu_res_WB;
     REGISTER_R_CE #(.N(DWIDTH))
     alu_X_WB (.q(alu_res_WB),
-              .d(alu_res),
+              .d(alu_res_X),
               .rst(rst),
               .ce(1'b1),
               .clk(clk));
@@ -541,8 +541,8 @@ module cpu #(
 
     wire [DWIDTH-1:0] wb_res;
     mux3 #(.N(DWIDTH))
-    wb_mux (.in0(pc_WB + 1),                         // TODO:
-            .in1(alu_res),
+    wb_mux (.in0(pc_WB + 4),                         // TODO:
+            .in1(alu_res_WB),
             .in2(mem_output),
             .sel(WBSel),
             .out(wb_res));
@@ -552,9 +552,9 @@ module cpu #(
     assign we = wa == X0_ADDR ? 1'b0 : RegWEn;
 
     mux3 #(.N(DWIDTH))
-    pc_sel_mux (.in0(pc_IF + 1),                     // TODO: Find out later why +1 ? 
+    pc_sel_mux (.in0(pc_IF + 4),                     // TODO: Find out later why +1 ? 
                 .in1(pc_ID_plus_jal_imm),
-                .in2(alu_res),
+                .in2(alu_res_X),
                 .sel(1'b0),
                 .out(pc_mux_out));
 
