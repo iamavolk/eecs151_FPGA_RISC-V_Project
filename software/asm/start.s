@@ -26,8 +26,14 @@ _start:
                     # Now we check that x1 contains 500 and x2 contains 100
 
 # TODO: add more tests here
-li x1, 5          # Set an initial value of x2
-li x11, 6
+li x1, 100
+jal x3, dest # deficient
+li x2, 2
+li x11, 5
 li x12, 7
+dest:
+add x10, x1, x2
+
+
 
 #done: j done

@@ -249,18 +249,44 @@ module cpu #(
                 .ce(1'b1),
                 .clk(clk));
 
+    wire [DWIDTH-1:0] pc_X;
+    REGISTER_R_CE #(.N(DWIDTH))
+    pc_ID_X (.q(pc_X),
+	     .d(pc_IF), // pc from IF stage (ID not implemented)
+	     .rst(rst),
+	     .ce(1'b1),
+	     .clk(clk));
+
+
     ////////////////////////////////////////////////////
     //
     //     X Stage BEGIN
     //
     ////////////////////////////////////////////////////
-    
+
+    // X-stage control signals
     wire [3:0] ALUSel_X = ctrl_X[10:7];
+    wire ASel = ctrl_X[5];
+    wire BSel = ctrl_X[6];
+
+    wire [DWIDTH-1:0] alu_A;
+    mux2 #(.N(DWIDTH))
+    alu_A_mux (.in0(rs1_X),
+	       .in1(pc_X),
+	       .sel(ASel),
+	       .out(alu_A));
+
+    wire [DWIDTH-1:0] alu_B;
+    mux2 #(.N(DWIDTH))
+    alu_B_mux (.in0(rs2_X),
+	       .in1(imm_X),
+	       .sel(BSel),
+	       .out(alu_B));
 
     wire [DWIDTH-1:0] alu_res_X;
     alu #(.N(DWIDTH))
-    alu_unit (.A(rs1_X),
-              .B(imm_X),
+    alu_unit (.A(alu_A),
+              .B(alu_B),
               .ALUSel(ALUSel_X),
               .ALURes(alu_res_X));
 
