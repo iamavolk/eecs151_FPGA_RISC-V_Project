@@ -172,7 +172,22 @@ module cpu #(
     assign imem_addrb = pc_IF[15:2];
     assign bios_addra = pc_IF[11:0];
 
-    wire [DWIDTH-1:0] instr_IF = imem_doutb;
+
+    // Instruction fetch
+    wire [DWIDTH-1:0] instr_IF;
+    mux2 #(.N(DWIDTH))
+    pc_30_mux (.in0(imem_doutb),
+               .in1(bios_douta),
+               .sel(pc_IF[30]),
+               .out(instr_IF));
+
+    wire instr_kill = 1'b0;                             // TODO: Condition for INSTR KILL
+    wire [DWIDTH-1:0] instr_ID;
+    mux2 #(.N(DWIDTH))
+    instr_kill_mux (.in0(instr_IF),
+                    .in1(`INST_NOP),
+                    .sel(instr_kill),
+                    .out(instr_ID));
 
     ////////////////////////////////////////////////////
     //
@@ -180,9 +195,8 @@ module cpu #(
     //
     ////////////////////////////////////////////////////
 
-    wire [DWIDTH-1:0] instr_ID = instr_IF;
-    assign ra1 = instr_IF[19:15];
-    assign ra2 = instr_IF[24:20];
+    assign ra1 = instr_ID[19:15];
+    assign ra2 = instr_ID[24:20];
 
     // Control Decoder
     wire [ROM_IDX_WIDTH-1:0] rom_index;
@@ -252,11 +266,19 @@ module cpu #(
     wire [DWIDTH-1:0] pc_X;
     REGISTER_R_CE #(.N(DWIDTH))
     pc_ID_X (.q(pc_X),
-	     .d(pc_IF), // pc from IF stage (ID not implemented)
-	     .rst(rst),
-	     .ce(1'b1),
-	     .clk(clk));
+	         .d(pc_IF), // pc from IF stage (ID not implemented)
+	         .rst(rst),
+	         .ce(1'b1),
+	         .clk(clk));
 
+    wire [DWIDTH-1:0] csr_uimm_X;
+    wire [DWIDTH-1:0] csr_uimm_extend = {27'b0,instr_ID[19:15]};
+    REGISTER_R_CE #(.N(DWIDTH))
+    csr_uImm_ID_X (.q(csr_uimm_X),
+                   .d(csr_uimm_extend),
+                   .rst(rst),
+                   .ce(1'b1),
+                   .clk(clk));
 
     ////////////////////////////////////////////////////
     //
@@ -265,23 +287,43 @@ module cpu #(
     ////////////////////////////////////////////////////
 
     // X-stage control signals
+    wire BrLUn = ctrl_X[4];
     wire [3:0] ALUSel_X = ctrl_X[10:7];
     wire ASel = ctrl_X[5];
     wire BSel = ctrl_X[6];
+    wire MemRW = ctrl_X[11];
+
+    // Branch Comparator
+    wire BrEq;
+    wire BrLt;
+    branch_comp #(.N(DWIDTH))
+    br_comp (.br_data0(rs1_X),
+             .br_data1(rs2_X),
+             .BrUn(BrLUn),
+             .BrEq(BrEq),
+             .BrLt(BrLt));
+
+    // CSR mux 
+    wire [DWIDTH-1:0] csr_X;
+    mux2 #(.N(DWIDTH))
+    csr_mux_X (.in0(rs1_X),
+               .in1(csr_uimm_X),
+               .sel(instr_X[14]),
+               .out(csr_X));
 
     wire [DWIDTH-1:0] alu_A;
     mux2 #(.N(DWIDTH))
     alu_A_mux (.in0(rs1_X),
-	       .in1(pc_X),
-	       .sel(ASel),
-	       .out(alu_A));
+	           .in1(pc_X),
+	           .sel(ASel),
+	           .out(alu_A));
 
     wire [DWIDTH-1:0] alu_B;
     mux2 #(.N(DWIDTH))
     alu_B_mux (.in0(rs2_X),
-	       .in1(imm_X),
-	       .sel(BSel),
-	       .out(alu_B));
+	           .in1(imm_X),
+	           .sel(BSel),
+	           .out(alu_B));
 
     wire [DWIDTH-1:0] alu_res_X;
     alu #(.N(DWIDTH))
@@ -289,6 +331,18 @@ module cpu #(
               .B(alu_B),
               .ALUSel(ALUSel_X),
               .ALURes(alu_res_X));
+        
+    // MEMORY
+    assign dmem_wbea = 4'b0000;                         // TODO: DMEM write -- assign proper value based on LD / ST instructions
+    assign imem_wbea = 4'b0000;                         // TODO: IMEM write -- assign proper value based on LD / ST instructions
+
+    assign bios_addrb = alu_res_X[11:0];
+    assign dmem_addra = alu_res_X[15:2];
+    assign imem_addra = alu_res_X[15:2];
+    assign dmem_dina = rs2_X;
+    assign imem_dina = rs2_X;
+
+    wire [DWIDTH-1:0] mem_output = 32'b0;
 
     ////////////////////////////////////////////////////
     //
@@ -320,14 +374,41 @@ module cpu #(
                 .ce(1'b1),
                 .clk(clk));
 
+    wire [DWIDTH-1:0] csr_WB;
+    REGISTER_R_CE #(.N(DWIDTH))
+    csr_X_WB (.q(csr_WB),
+              .d(csr_X),
+              .rst(rst),
+              .ce(1'b1),
+              .clk(clk));
+
+    wire [DWIDTH-1:0] pc_WB;
+    REGISTER_R_CE #(.N(DWIDTH))
+    pc_X_WB (.q(pc_WB),
+             .d(pc_X),
+             .rst(rst),
+             .ce(1'b1),
+             .clk(clk));
+
     ////////////////////////////////////////////////////
     //
     //     WB Stage BEGIN 
     //
     ////////////////////////////////////////////////////
 
-    wire [DWIDTH-1:0] res_WB = alu_res_WB;
     wire RegWEn = ctrl_WB[0];
+    wire [1:0] WBSel = ctrl_WB[13:12];
+
+    wire [DWIDTH-1:0] res_WB;
+    mux3 #(.N(DWIDTH))
+    wb_mux (.in0(pc_WB + 4),                                // TODO:
+            .in1(alu_res_WB),
+            .in2(mem_output),
+            .sel(WBSel),
+            .out(res_WB));
+
+    assign csr_din = csr_WB;
+    assign csr_we = 1'b0;                                    // TODO: change, subject to instr_WB 
 
     assign wa = instr_WB[11:7]; 
     assign wd = res_WB;
