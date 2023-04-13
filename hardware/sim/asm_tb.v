@@ -68,11 +68,15 @@ module asm_tb();
     // Your processor should begin executing the code in /software/asm/start.s
 
     // Test ADD
-    wait_for_reg_to_equal(1, 32'd100);       // Run the simulation until the flag is set to 1
-    check_reg(1, 32'd100, 1);               // Verify that x1 contains 300
+    wait_for_reg_to_equal(1, 32'd5);       // Run the simulation until the flag is set to 1
+    check_reg(1, 32'd5, 1);               // Verify that x1 contains 300
 
-    wait_for_reg_to_equal(11, 32'd200);       // Run the simulation until the flag is set to 1
-    check_reg(11, 32'd200, 1);               // Verify that x1 contains 300
+    wait_for_reg_to_equal(11, 32'd6);       // Run the simulation until the flag is set to 1
+    check_reg(11, 32'd6, 2);               // Verify that x1 contains 300
+
+    wait_for_reg_to_equal(12, 32'd7);       // Run the simulation until the flag is set to 1
+    check_reg(12, 32'd7, 3);               // Verify that x1 contains 300
+
     // Test BEQ
     //wait_for_reg_to_equal(20, 32'd2);       // Run the simulation until the flag is set to 2
     //check_reg(1, 32'd500, 2);               // Verify that x1 contains 500
