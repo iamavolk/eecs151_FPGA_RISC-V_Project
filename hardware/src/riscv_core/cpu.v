@@ -310,6 +310,7 @@ module cpu #(
                .in1(csr_uimm_X),
                .sel(instr_X[14]),
                .out(csr_X));
+    assign csr_din = csr_X;
 
     wire [DWIDTH-1:0] alu_A;
     mux2 #(.N(DWIDTH))
@@ -333,8 +334,20 @@ module cpu #(
               .ALURes(alu_res_X));
         
     // MEMORY
-    assign dmem_wbea = 4'b0000;                         // TODO: DMEM write -- assign proper value based on LD / ST instructions
-    assign imem_wbea = 4'b0000;                         // TODO: IMEM write -- assign proper value based on LD / ST instructions
+    //assign dmem_wbea = 4'b0000;                         // TODO: DMEM write -- assign proper value based on LD / ST instructions
+    //assign imem_wbea = 4'b0000;                         // TODO: IMEM write -- assign proper value based on LD / ST instructions
+    assign dmem_wbea =
+        ((MemRW == 1'b1) && 
+        ((alu_res_X[31:28] == 4'b0001) || (alu_res_X[31:28] == 4'b0011))) ?
+        4'b1111 :
+        4'b0000;
+
+    assign imem_wbea =
+        ((MemRW == 1'b1) && 
+        ((alu_res_X[31:28] == 4'b0010) || (alu_res_X[31:28] == 4'b0011)) && 
+        (pc_X[30] == 1'b1)) ? 
+        4'b1111 :
+        4'b0000;
 
     assign bios_addrb = alu_res_X[11:0];
     assign dmem_addra = alu_res_X[15:2];
@@ -342,14 +355,25 @@ module cpu #(
     assign dmem_dina = rs2_X;
     assign imem_dina = rs2_X;
 
-    wire [DWIDTH-1:0] mem_output = 32'b0;
+    //wire [DWIDTH-1:0] mem_output = 32'b0;
+    wire [DWIDTH-1:0] mem_output;
+    mem_output #(.WIDTH(DWIDTH))
+    mem_res_unit (.dmem_out(dmem_douta),
+                  .bios_out(bios_doutb),
+                  .alu_addr(alu_res_X),
+                  .uart_rx_valid(uart_rx_data_out_valid),
+                  .uart_tx_ready(uart_tx_data_in_ready),
+                  .uart_rx_out(uart_rx_data_out),
+                  .cyc_ctr(32'b1),
+                  .instr_ctr(32'b1),                        // TODO:
+                  .mem_result(mem_output));
 
     ////////////////////////////////////////////////////
     //
     //     X Stage END 
     //
     ////////////////////////////////////////////////////
-
+     
     wire [DWIDTH-1:0] alu_res_WB;
     REGISTER_R_CE #(.N(DWIDTH))
     alu_X_WB (.q(alu_res_WB),
@@ -357,7 +381,7 @@ module cpu #(
               .rst(rst),
               .ce(1'b1),
               .clk(clk));
-
+     
     wire [CWIDTH-1:0] ctrl_WB;
     REGISTER_R_CE #(.N(CWIDTH))
     ctrl_X_WB (.q(ctrl_WB),
@@ -365,7 +389,7 @@ module cpu #(
                .rst(rst),
                .ce(1'b1),
                .clk(clk));
-
+     
     wire [DWIDTH-1:0] instr_WB;
     REGISTER_R_CE #(.N(DWIDTH))
     instr_X_WB (.q(instr_WB),
@@ -373,14 +397,14 @@ module cpu #(
                 .rst(rst),
                 .ce(1'b1),
                 .clk(clk));
-
-    wire [DWIDTH-1:0] csr_WB;
-    REGISTER_R_CE #(.N(DWIDTH))
-    csr_X_WB (.q(csr_WB),
-              .d(csr_X),
-              .rst(rst),
-              .ce(1'b1),
-              .clk(clk));
+     
+    //wire [DWIDTH-1:0] csr_WB;
+    //REGISTER_R_CE #(.N(DWIDTH))
+    //csr_X_WB (.q(csr_WB),
+    //          .d(csr_X),
+    //          .rst(rst),
+    //          .ce(1'b1),
+    //          .clk(clk));
 
     wire [DWIDTH-1:0] pc_WB;
     REGISTER_R_CE #(.N(DWIDTH))
