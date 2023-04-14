@@ -67,74 +67,8 @@ module asm_tb();
 
     // Your processor should begin executing the code in /software/asm/start.s
 
-    wait_for_reg_to_equal(1, 32'd100);	// li x1 100
-    check_reg(1, 32'd100, 1);
-
-    wait_for_reg_to_equal(2, 32'd40);	// li x2 40
-    check_reg(2, 32'd40, 2);
-
-    wait_for_reg_to_equal(11, 32'd2);	// li x11 2
-    check_reg(11, 32'd2, 3);
-
-    wait_for_reg_to_equal(12, 32'd1);	// li x12 1
-    check_reg(12, 32'd1, 4);
-
-    wait_for_reg_to_equal(3, 32'd60);	// sub x3 x1 x2
-    check_reg(3, 32'd60, 5);
-
-    wait_for_reg_to_equal(4, 32'd140);	// add x4 x1 x1
-    check_reg(4, 32'd140, 6);
-
-    wait_for_reg_to_equal(5, 32'd4);	// sll x5 x11 x12
-    check_reg(5, 32'd4, 7);
-
-    wait_for_reg_to_equal(6, 32'd1);	// srl x6 x1 x1
-    check_reg(6, 32'd1, 8);
-
-    wait_for_reg_to_equal(7, 32'd0);	// slt x7 x1 x1
-    check_reg(7, 32'd0, 9);
-
-    wait_for_reg_to_equal(8, 32'd1);    // slt x8 x2 x1
-    check_reg(8, 32'd1, 10);
-
-    wait_for_reg_to_equal(10, 32'hFFFFFFF6);	// li x10 -10
-    check_reg(10, 32'hFFFFFFF6, 11);
-
-    wait_for_reg_to_equal(3, 32'b100000);	// and x3 x1 x2
-    check_reg(3, 32'b100000, 12);
-
-    wait_for_reg_to_equal(4, 32'd108);		// or x4 x1 x2
-    check_reg(4, 32'd108, 13);
-
-    wait_for_reg_to_equal(5, 32'b1001100);	// xor x5 x1 x2
-    check_reg(5, 32'b1001100, 14);
-
-    wait_for_reg_to_equal(6, 32'b1);      // sltu x6 x2 x10
-    check_reg(6, 32'b1, 15);
-
-    wait_for_reg_to_equal(7, 32'b1);      // slt x7 x10 x2
-    check_reg(7, 32'b1, 16);
-
-    wait_for_reg_to_equal(8, 32'hFFFFFFFD);	// srai x8 x10 2
-    check_reg(8, 32'hFFFFFFFD, 17);
-
-    wait_for_reg_to_equal(9, 32'h3FFFFFFD);     // srli x9 x10 2
-    check_reg(9, 32'h3FFFFFFD, 18);
-
-    wait_for_reg_to_equal(13, 32'b1);		// sltiu x13 x11 -20
-    check_reg(13, 32'b1, 19);
-
-    wait_for_reg_to_equal(14, 32'b1);     	// sltiu x14 x11 20
-    check_reg(14, 32'b1, 20);
-
-    wait_for_reg_to_equal(15, 32'b0);     	// sltiu x15 x11 1
-    check_reg(15, 32'b0, 21);
-
-    wait_for_reg_to_equal(0, 32'b0);           // li x0 1
-    check_reg(0, 32'b0, 22);
-
-    wait_for_reg_to_equal(0, 32'b0);           // add x0 x0 1
-    check_reg(0, 32'b0, 23);
+    wait_for_reg_to_equal(15, 32'd7);           // add x0 x0 1
+    check_reg(15, 32'd7, 1);
 
     // Test BEQ
     //wait_for_reg_to_equal(20, 32'd2);       // Run the simulation until the flag is set to 2

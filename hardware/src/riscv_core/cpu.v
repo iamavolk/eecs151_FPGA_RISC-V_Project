@@ -311,6 +311,7 @@ module cpu #(
                .sel(instr_X[14]),
                .out(csr_X));
     assign csr_din = csr_X;
+    assign csr_we = 1'b0;
 
     wire [DWIDTH-1:0] alu_A;
     mux2 #(.N(DWIDTH))
@@ -431,8 +432,8 @@ module cpu #(
             .sel(WBSel),
             .out(res_WB));
 
-    assign csr_din = csr_WB;
-    assign csr_we = 1'b0;                                    // TODO: change, subject to instr_WB 
+    //assign csr_din = csr_WB;
+    //assign csr_we = 1'b0;                                    // TODO: change, subject to instr_WB 
 
     assign wa = instr_WB[11:7]; 
     assign wd = res_WB;
