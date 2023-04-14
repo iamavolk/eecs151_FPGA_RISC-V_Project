@@ -81,7 +81,7 @@ module cpu #(
           .clk(clk));
 
     //////////////////////////////////////////////////
-    ////  
+    ////
     ////    Mem Specific Signals Begin
     ////
     //////////////////////////////////////////////////
@@ -152,9 +152,10 @@ module cpu #(
     // TODO: Your code to implement a fully functioning RISC-V core
     // Add as many modules as you want
     // Feel free to move the memory modules around
-  
+    
     wire [DWIDTH-1:0] pc_IF;
     wire [DWIDTH-1:0] pc_sel_mux_out;
+
     mux3 #(.N(DWIDTH))
     pc_sel_mux (.in0(pc_IF + 4),
                 .in1(32'b0),
@@ -171,7 +172,6 @@ module cpu #(
 
     assign imem_addrb = pc_IF[15:2];
     assign bios_addra = pc_IF[11:0];
-
 
     // Instruction fetch
     wire [DWIDTH-1:0] instr_IF;
@@ -266,7 +266,7 @@ module cpu #(
     wire [DWIDTH-1:0] pc_X;
     REGISTER_R_CE #(.N(DWIDTH))
     pc_ID_X (.q(pc_X),
-	         .d(pc_IF), // pc from IF stage (ID not implemented)
+	         .d(pc_IF - 4), // pc from IF stage (ID not implemented)
 	         .rst(rst),
 	         .ce(1'b1),
 	         .clk(clk));
@@ -311,7 +311,7 @@ module cpu #(
                .sel(instr_X[14]),
                .out(csr_X));
     assign csr_din = csr_X;
-    assign csr_we = 1'b0;
+    assign csr_we = 1'b0;                                    // TODO: change, subject to instr_WB 
 
     wire [DWIDTH-1:0] alu_A;
     mux2 #(.N(DWIDTH))
@@ -337,18 +337,29 @@ module cpu #(
     // MEMORY
     //assign dmem_wbea = 4'b0000;                         // TODO: DMEM write -- assign proper value based on LD / ST instructions
     //assign imem_wbea = 4'b0000;                         // TODO: IMEM write -- assign proper value based on LD / ST instructions
-    assign dmem_wbea =
-        ((MemRW == 1'b1) && 
-        ((alu_res_X[31:28] == 4'b0001) || (alu_res_X[31:28] == 4'b0011))) ?
-        4'b1111 :
-        4'b0000;
+    //assign dmem_wbea =
+    //    ((MemRW == 1'b1) && 
+    //    ((alu_res_X[31:28] == 4'b0001) || (alu_res_X[31:28] == 4'b0011))) ?
+    //    4'b1111 :
+    //    4'b0000;
 
-    assign imem_wbea =
-        ((MemRW == 1'b1) && 
-        ((alu_res_X[31:28] == 4'b0010) || (alu_res_X[31:28] == 4'b0011)) && 
-        (pc_X[30] == 1'b1)) ? 
-        4'b1111 :
-        4'b0000;
+    //assign imem_wbea =
+    //    ((MemRW == 1'b1) && 
+    //    ((alu_res_X[31:28] == 4'b0010) || (alu_res_X[31:28] == 4'b0011)) && 
+    //    (pc_X[30] == 1'b1)) ? 
+    //    4'b1111 :
+    //    4'b0000;
+
+    wire [DWIDTH-1:0] dmem_mask, imem_mask;
+    mem_wb_select #(.N(DWIDTH))
+    mem_mask (.mem_write(MemRW),
+              .instr(instr_X),
+              .addr_alu_res(alu_res_X[31:28]),
+              .dmem_wea_mask(dmem_mask),
+              .imem_wea_mask(imem_mask));
+
+    assign dmem_wbea = dmem_mask;
+    assign imem_wbea = imem_mask;
 
     assign bios_addrb = alu_res_X[11:0];
     assign dmem_addra = alu_res_X[15:2];
@@ -431,9 +442,6 @@ module cpu #(
             .in2(mem_output),
             .sel(WBSel),
             .out(res_WB));
-
-    //assign csr_din = csr_WB;
-    //assign csr_we = 1'b0;                                    // TODO: change, subject to instr_WB 
 
     assign wa = instr_WB[11:7]; 
     assign wd = res_WB;

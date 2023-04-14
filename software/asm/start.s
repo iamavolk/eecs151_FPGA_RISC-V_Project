@@ -26,14 +26,14 @@ _start:
                     # Now we check that x1 contains 500 and x2 contains 100
 
 # TODO: add more tests here
-add x0, x0, 1	# 23) x0 should stay 0
-li x1, 40 	# 1) x1 = 100 = 64 + 32 + 4 = 1100100
-li x2, 50	# 2) x2 = 40 = 32 + 8 = 101000
-li x11, 2	# 3) x11 = 2
-li x12, 1	# 4) x12 = 1
-sw x2, 0(x1)
+add x0, x0, 1
+auipc x14, 1
+li x1, 40 
+li x2, 1084 
+li x11, 2
+li x12, 1
+sh x2, 0(x1)
 li x13, 5
-li x14, 6
 li x15, 7
 
 
