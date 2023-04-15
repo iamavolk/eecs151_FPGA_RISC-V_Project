@@ -12,11 +12,11 @@ module mem_load_mask #(
     wire [WIDTH-1:0] byte;
     mux4 #(.N(WIDTH))
     b_mux (.in0(mem_res[7:0]),
-             .in1(mem_res[15:8]),
-             .in2(mem_res[23:16]),
-             .in3(mem_res[31:24]),
-             .sel(addr),
-             .out(byte));
+           .in1(mem_res[15:8]),
+           .in2(mem_res[23:16]),
+           .in3(mem_res[31:24]),
+           .sel(addr),
+           .out(byte));
 
     wire [WIDTH-1:0] byte_res;
     mux2 #(.N(WIDTH))

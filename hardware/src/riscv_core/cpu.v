@@ -376,10 +376,8 @@ module cpu #(
     assign dmem_dina = rs2_X;
     assign imem_dina = rs2_X;
 
-    
-
     //wire [DWIDTH-1:0] mem_output = 32'b0;
-    //wire [DWIDTH-1:0] mem_masked = {24'b0, mem_output[7:0]};
+    
     wire [DWIDTH-1:0] mem_output;
     mem_output #(.WIDTH(DWIDTH))
     mem_res_unit (.dmem_out(dmem_douta),
@@ -391,6 +389,13 @@ module cpu #(
                   .cyc_ctr(32'b1),                          // TODO: cycle ctr
                   .instr_ctr(32'b1),                        // TODO: instr ctr
                   .mem_result(mem_output));
+
+    wire [DWIDTH-1:0] mem_masked;
+    mem_load_mask #(.N(DWIDTH))
+    mem_mask_unit (.(alu_res_X[1:0]),
+                   .(instr_X[14:12]),
+                   .(mem_output),
+                   .(mem_masked));
 
     ////////////////////////////////////////////////////
     //
@@ -447,16 +452,16 @@ module cpu #(
     wire RegWEn = ctrl_WB[0];
     wire [1:0] WBSel = ctrl_WB[13:12];
 
-
     wire [DWIDTH-1:0] res_WB;
     mux3 #(.N(DWIDTH))
-    wb_mux (.in0(mem_output),                                // TODO:
+    //wb_mux (.in0(mem_output),
+    wb_mux (.in0(mem_masked),
             .in1(alu_res_WB),
             .in2(pc_WB + 4),
             .sel(WBSel),
             .out(res_WB));
 
-    assign wa = instr_WB[11:7]; 
+    assign wa = instr_WB[11:7];
     assign wd = res_WB;
     assign we = wa == X0_ADDR ? 1'b0 : RegWEn;
 
