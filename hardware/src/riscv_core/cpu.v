@@ -154,13 +154,14 @@ module cpu #(
     // Feel free to move the memory modules around
     
     wire [DWIDTH-1:0] pc_IF;
+    wire [DWIDTH-1:0] br_jalr_select;
     wire [DWIDTH-1:0] pc_sel_mux_out;
-
+    wire [1:0] pc_select;
     mux3 #(.N(DWIDTH))
     pc_sel_mux (.in0(pc_IF + 4),
                 .in1(32'b0),
-                .in2(32'b0),
-                .sel(2'b0),
+                .in2(br_jalr_select),
+                .sel(pc_select),
                 .out(pc_sel_mux_out));
 
     REGISTER_R_CE #(.N(DWIDTH))
@@ -189,7 +190,7 @@ module cpu #(
                .sel(pc_IF[30]),
                .out(instr_IF));
 
-    wire instr_kill = 1'b0;                             // TODO: Condition for INSTR KILL
+    wire instr_kill = pc_ID == 32'b0 ? 1'b1 : 1'b0;                             // TODO: Condition for INSTR KILL
     wire [DWIDTH-1:0] instr_ID;
     mux2 #(.N(DWIDTH))
     instr_kill_mux (.in0(instr_IF),
@@ -224,7 +225,7 @@ module cpu #(
     imm_gen (.instr(instr_ID),
              .imm_sel(imm_sel_ID[1:0]),
              .imm(imm_ID));
-
+    
     ////////////////////////////////////////////////////
     //
     //     ID Stage END
@@ -342,7 +343,14 @@ module cpu #(
               .B(alu_B),
               .ALUSel(ALUSel_X),
               .ALURes(alu_res_X));
-        
+ 
+    assign br_jalr_select = alu_res_X;
+
+    pc_sel_unit (.instr_hex(ctrl_X),
+                 .BrEq(BrEq),
+                 .BrLt(BrLt),
+                 .is_jal_id(1'b0),
+                 .PCSel(pc_select));
     // MEMORY
     //assign dmem_wbea = 4'b0000;                         // TODO: DMEM write -- assign proper value based on LD / ST instructions
     //assign imem_wbea = 4'b0000;                         // TODO: IMEM write -- assign proper value based on LD / ST instructions
@@ -378,24 +386,18 @@ module cpu #(
 
     //wire [DWIDTH-1:0] mem_output = 32'b0;
     
-    wire [DWIDTH-1:0] mem_output;
-    mem_output #(.WIDTH(DWIDTH))
-    mem_res_unit (.dmem_out(dmem_douta),
-                  .bios_out(bios_doutb),
-                  .alu_addr(alu_res_X),
-                  .uart_rx_valid(uart_rx_data_out_valid),
-                  .uart_tx_ready(uart_tx_data_in_ready),
-                  .uart_rx_out(uart_rx_data_out),
-                  .cyc_ctr(32'b1),                          // TODO: cycle ctr
-                  .instr_ctr(32'b1),                        // TODO: instr ctr
-                  .mem_result(mem_output));
+    //wire [DWIDTH-1:0] mem_output;
+    //mem_output #(.WIDTH(DWIDTH))
+    //mem_res_unit (.dmem_out(dmem_douta),
+    //              .bios_out(bios_doutb),
+    //              .alu_addr(alu_res_X),
+    //              .uart_rx_valid(uart_rx_data_out_valid),
+    //              .uart_tx_ready(uart_tx_data_in_ready),
+    //              .uart_rx_out(uart_rx_data_out),
+    //              .cyc_ctr(32'b1),                          // TODO: cycle ctr
+    //              .instr_ctr(32'b1),                        // TODO: instr ctr
+    //              .mem_result(mem_output));
 
-    wire [DWIDTH-1:0] mem_masked;
-    mem_load_mask #(.N(DWIDTH))
-    mem_mask_unit (.(alu_res_X[1:0]),
-                   .(instr_X[14:12]),
-                   .(mem_output),
-                   .(mem_masked));
 
     ////////////////////////////////////////////////////
     //
@@ -448,6 +450,26 @@ module cpu #(
     //     WB Stage BEGIN 
     //
     ////////////////////////////////////////////////////
+
+    wire [DWIDTH-1:0] mem_output;
+    mem_output #(.WIDTH(DWIDTH))
+    mem_res_unit (.dmem_out(dmem_douta),
+                  .bios_out(bios_doutb),
+                  .alu_addr(alu_res_WB),                    // TODO: check alu_res_X vs alu_res_WB
+                  .uart_rx_valid(uart_rx_data_out_valid),
+                  .uart_tx_ready(uart_tx_data_in_ready),
+                  .uart_rx_out(uart_rx_data_out),
+                  .cyc_ctr(32'b1),                          // TODO: cycle ctr
+                  .instr_ctr(32'b1),                        // TODO: instr ctr
+                  .mem_result(mem_output));
+
+    wire [DWIDTH-1:0] mem_masked;
+    mem_load_mask #(.N(DWIDTH))
+    //mem_load_mask_eff #(.N(DWIDTH))
+    mem_mask_unit (.addr(alu_res_WB[1:0]),
+                   .func3(instr_WB[14:12]),
+                   .mem_res(mem_output),
+                   .mem_masked_out(mem_masked));
 
     wire RegWEn = ctrl_WB[0];
     wire [1:0] WBSel = ctrl_WB[13:12];
