@@ -11,16 +11,17 @@ module pc_sel_unit(
     localparam HBGEU = 16'h4074;
     localparam HJALR = 16'h2041;
 
-    //assign br_jalr =
-	//(instr_hex == HBEQ && BrEq) ||
-	//(instr_hex == HBNE && ~BrEq) ||
-	//((instr_hex == HBLT || instr_hex == HBLTU) && BrLt) ||
-	//((instr_hex == HBGE || instr_hex == HBGEU) && ~BrLt) ||
-	//(instr_hex == HJALR);
-    
+    wire br_jalr;
+    assign br_jalr =
+	(instr_hex == HBEQ && BrEq) ||
+	(instr_hex == HBNE && ~BrEq) ||
+	((instr_hex == HBLT || instr_hex == HBLTU) && BrLt) ||
+	((instr_hex == HBGE || instr_hex == HBGEU) && ~BrLt) ||
+	(instr_hex == HJALR);
+
     //assign PCSel =
 	// (is_jal_id) ? 2'b01 :
 	// (br_jalr ? 2'b10 : 2'b00);
-    assign PCSel = instr_hex == HJALR ? 2'b10 : 2'b00;
-        //(is_jal_id ? 2'b01 : 2'b00);
+
+    assign PCSel = (br_jalr) ? 2'b10 : 2'b00;
 endmodule
