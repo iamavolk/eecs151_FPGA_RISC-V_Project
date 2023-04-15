@@ -170,6 +170,14 @@ module cpu #(
             .ce(1'b1),
             .clk(clk));
 
+    wire [DWIDTH-1:0] pc_ID;
+    REGISTER_R_CE #(.N(DWIDTH))
+    pc_IF_ID (.q(pc_ID),
+	          .d(pc_IF),
+	          .rst(rst),
+	          .ce(1'b1),
+	          .clk(clk));
+
     assign imem_addrb = pc_IF[15:2];
     assign bios_addra = pc_IF[11:0];
 
@@ -266,7 +274,8 @@ module cpu #(
     wire [DWIDTH-1:0] pc_X;
     REGISTER_R_CE #(.N(DWIDTH))
     pc_ID_X (.q(pc_X),
-	         .d(pc_IF - 4), // pc from IF stage (ID not implemented)
+	         //.d(pc_IF), // pc from IF stage (ID NOT implemented)
+	         .d(pc_ID), // pc from ID stage (ID implemented)
 	         .rst(rst),
 	         .ce(1'b1),
 	         .clk(clk));
@@ -367,7 +376,10 @@ module cpu #(
     assign dmem_dina = rs2_X;
     assign imem_dina = rs2_X;
 
+    
+
     //wire [DWIDTH-1:0] mem_output = 32'b0;
+    //wire [DWIDTH-1:0] mem_masked = {24'b0, mem_output[7:0]};
     wire [DWIDTH-1:0] mem_output;
     mem_output #(.WIDTH(DWIDTH))
     mem_res_unit (.dmem_out(dmem_douta),
@@ -376,8 +388,8 @@ module cpu #(
                   .uart_rx_valid(uart_rx_data_out_valid),
                   .uart_tx_ready(uart_tx_data_in_ready),
                   .uart_rx_out(uart_rx_data_out),
-                  .cyc_ctr(32'b1),
-                  .instr_ctr(32'b1),                        // TODO:
+                  .cyc_ctr(32'b1),                          // TODO: cycle ctr
+                  .instr_ctr(32'b1),                        // TODO: instr ctr
                   .mem_result(mem_output));
 
     ////////////////////////////////////////////////////
@@ -435,11 +447,12 @@ module cpu #(
     wire RegWEn = ctrl_WB[0];
     wire [1:0] WBSel = ctrl_WB[13:12];
 
+
     wire [DWIDTH-1:0] res_WB;
     mux3 #(.N(DWIDTH))
-    wb_mux (.in0(pc_WB + 4),                                // TODO:
+    wb_mux (.in0(mem_output),                                // TODO:
             .in1(alu_res_WB),
-            .in2(mem_output),
+            .in2(pc_WB + 4),
             .sel(WBSel),
             .out(res_WB));
 

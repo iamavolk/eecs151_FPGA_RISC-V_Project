@@ -27,14 +27,15 @@ _start:
 
 # TODO: add more tests here
 add x0, x0, 1
-auipc x14, 1
-li x1, 40 
-li x2, 1084 
-li x11, 2
-li x12, 1
-sh x2, 0(x1)
-li x13, 5
-li x15, 7
+li x1, 80
+li x2, 761 
+li x3, 3
+li x4, 4
+sw x2, 0(x1)
+li x12, 12
+li x13, 13
+lbu x5, 0(x1)
+li x14, 14
 
 
 #done: j done
