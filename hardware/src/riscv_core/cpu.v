@@ -204,7 +204,8 @@ module cpu #(
     wire [DWIDTH-1:0] instr_ID;
     mux2 #(.N(DWIDTH))
     instr_kill_mux (.in0(instr_IF),
-                    .in1(`INST_NOP),
+                    //.in1(`INST_NOP),
+                    .in1(`CLEAR_NOP),
                     .sel(instr_kill),
                     .out(instr_ID));
 
@@ -216,6 +217,26 @@ module cpu #(
 
     assign ra1 = instr_ID[19:15];
     assign ra2 = instr_ID[24:20];
+
+    // FW_ID_MUX_rs1
+    wire [DWIDTH-1:0] alu_rs1_res;
+    wire [DWIDTH-1:0] fwd_ID_rs1_res;
+    wire fw_A;
+    mux2 #(.N(DWIDTH))
+    fw_ID_mux_rs1 (.in0(rd1),
+                   .in1(alu_rs1_res),
+                   .sel(fw_A),
+                   .out(fwd_ID_rs1_res));
+
+    // FW_ID_MUX_rs2
+    wire [DWIDTH-1:0] alu_rs2_res;
+    wire [DWIDTH-1:0] fwd_ID_rs2_res;
+    wire fw_B;
+    mux2 #(.N(DWIDTH))
+    fw_ID_mux_rs2 (.in0(rd2),
+                   .in1(alu_rs2_res),
+                   .sel(fw_B),
+                   .out(fwd_ID_rs2_res));
 
     // Control Decoder
     wire [ROM_IDX_WIDTH-1:0] rom_index;
@@ -268,7 +289,8 @@ module cpu #(
     wire [DWIDTH-1:0] rs1_X;
     REGISTER_R_CE #(.N(DWIDTH))
     rs1_ID_X (.q(rs1_X),
-              .d(rd1),
+              //.d(rd1),
+              .d(fwd_ID_rs1_res),
               .rst(rst),
               .ce(1'b1),
               .clk(clk));
@@ -276,7 +298,8 @@ module cpu #(
     wire [DWIDTH-1:0] rs2_X;
     REGISTER_R_CE #(.N(DWIDTH))
     rs2_ID_X (.q(rs2_X),
-              .d(rd2),
+              //.d(rd2),
+              .d(fwd_ID_rs2_res),
               .rst(rst),
               .ce(1'b1),
               .clk(clk));
@@ -318,6 +341,7 @@ module cpu #(
     wire ASel = ctrl_X[5];
     wire BSel = ctrl_X[6];
     wire MemRW = ctrl_X[11];
+    wire RegWEn_X = ctrl_X[0];
 
     // Branch Comparator
     wire BrEq;
@@ -359,6 +383,16 @@ module cpu #(
               .B(alu_B),
               .ALUSel(ALUSel_X),
               .ALURes(alu_res_X));
+    assign alu_rs1_res = alu_res_X;
+    assign alu_rs2_res = alu_res_X;
+
+    fwd_unit
+    forwarding (.rf_wen_X(RegWEn_X),
+                .rd_X(instr_X[11:7]),
+                .rs1_ID(instr_ID[19:15]),
+                .rs2_ID(instr_ID[24:20]),
+                .fw_ID_A(fw_A), 
+                .fw_ID_B(fw_B));
 
     assign br_jalr_select = alu_res_X;
     wire is_jal_id = (ctrl_ID == HJAL);

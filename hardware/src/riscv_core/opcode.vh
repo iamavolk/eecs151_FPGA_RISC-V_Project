@@ -28,6 +28,9 @@
 `define OPC_ARI_RTYPE   7'b0110011
 `define OPC_ARI_ITYPE   7'b0010011
 
+// Kill instr
+`define OPC_KILL        7'b0100101
+
 // ***** Function codes *****
 
 // Branch function codes
@@ -71,5 +74,6 @@
 
 // ***** Special instructions *****
 `define INST_NOP        {12'd0, 5'd0, `FNC_ADD_SUB, 5'd0, `OPC_ARI_ITYPE}
+`define CLEAR_NOP       {12'd0, 5'd0, `FNC_ADD_SUB, 5'd0, `OPC_KILL}
 
 `endif //OPCODE

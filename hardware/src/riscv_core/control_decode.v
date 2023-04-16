@@ -79,7 +79,8 @@ always @(*) begin
         `OPC_LUI: ROMIn_res = `LUI;
         `OPC_JAL: ROMIn_res = `JAL;
         `OPC_JALR: ROMIn_res = `JALR;
-	default: ROMIn_res = 6'bxxxxxx;	// undefined
+	//default: ROMIn_res = 6'bxxxxxx;	// was here before I introduced CLEAR_NOP 
+	default: ROMIn_res = `NOPE;	// undefined
     endcase
 end
 

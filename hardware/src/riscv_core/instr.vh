@@ -55,4 +55,7 @@
 // I-jump-type
 `define JALR	6'd36
 
+// Nope
+`define NOPE 6'd37
+
 `endif
