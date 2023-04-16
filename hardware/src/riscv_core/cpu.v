@@ -192,16 +192,14 @@ module cpu #(
                .sel(pc_IF[30]),
                .out(instr_IF));
 
-    wire is_ctrl_x_jal;
-    wire is_ctrl_x_jalr;
-    wire is_ctrl_wb_jalr;
-    //wire instr_kill = ((pc_ID == 32'b0) || is_ctrl_x_jal || is_ctrl_x_jalr || is_ctrl_wb_jalr) ? 1'b1 : 1'b0;                             // TODO: Condition for INSTR KILL
+    // Instr kill iff ctrl redirect (see unit)      
     wire instr_kill_control;
     wire [1:0] pc_select_wb_stage;
     instr_kill_unit (.pc_sel_x(pc_select),
                      .pc_sel_wb(pc_select_wb_stage),
                      .instr_kill_res(instr_kill_control));
 
+    // Handling consistency immediately after reset
     wire instr_kill = ((pc_ID == 32'b0) || instr_kill_control);
     wire [DWIDTH-1:0] instr_ID;
     mux2 #(.N(DWIDTH))
@@ -224,6 +222,7 @@ module cpu #(
     control_decode
     ctrl_dec (.instr(instr_ID),
               .ROMIn(rom_index));
+
     // Control ROM
     wire [CWIDTH-1:0] ctrl_ID;
     control_unit
@@ -238,6 +237,7 @@ module cpu #(
              .imm_sel(imm_sel_ID[1:0]),
              .imm(imm_ID));
     
+    // JAL in ID-stage results in redirect    
     jal_unit                                
     j_imm_plus_pc_unit (.instr(instr_ID),
                         .pc(pc_ID),
@@ -292,8 +292,7 @@ module cpu #(
     wire [DWIDTH-1:0] pc_X;
     REGISTER_R_CE #(.N(DWIDTH))
     pc_ID_X (.q(pc_X),
-	         //.d(pc_IF), // pc from IF stage (ID NOT implemented)
-	         .d(pc_ID), // pc from ID stage (ID implemented)
+	         .d(pc_ID),
 	         .rst(rst),
 	         .ce(1'b1),
 	         .clk(clk));
@@ -312,9 +311,6 @@ module cpu #(
     //     X Stage BEGIN
     //
     ////////////////////////////////////////////////////
-
-    assign is_ctrl_x_jal = (ctrl_X == HJAL);
-    assign is_ctrl_x_jalr = (ctrl_X == HJALR);
 
     // X-stage control signals
     wire BrLUn = ctrl_X[4];
@@ -341,7 +337,7 @@ module cpu #(
                .sel(instr_X[14]),
                .out(csr_X));
     assign csr_din = csr_X;
-    assign csr_we = 1'b0;                                    // TODO: change, subject to instr_WB 
+    assign csr_we = 1'b0;                              // TODO: change, subject to instr_WB 
 
     wire [DWIDTH-1:0] alu_A;
     mux2 #(.N(DWIDTH))
@@ -363,7 +359,7 @@ module cpu #(
               .B(alu_B),
               .ALUSel(ALUSel_X),
               .ALURes(alu_res_X));
- 
+
     assign br_jalr_select = alu_res_X;
     wire is_jal_id = (ctrl_ID == HJAL);
 
@@ -372,21 +368,6 @@ module cpu #(
                  .BrLt(BrLt),
                  .is_jal_id(is_jal_id),
                  .PCSel(pc_select));
-    // MEMORY
-    //assign dmem_wbea = 4'b0000;                         // TODO: DMEM write -- assign proper value based on LD / ST instructions
-    //assign imem_wbea = 4'b0000;                         // TODO: IMEM write -- assign proper value based on LD / ST instructions
-    //assign dmem_wbea =
-    //    ((MemRW == 1'b1) && 
-    //    ((alu_res_X[31:28] == 4'b0001) || (alu_res_X[31:28] == 4'b0011))) ?
-    //    4'b1111 :
-    //    4'b0000;
-
-    //assign imem_wbea =
-    //    ((MemRW == 1'b1) && 
-    //    ((alu_res_X[31:28] == 4'b0010) || (alu_res_X[31:28] == 4'b0011)) && 
-    //    (pc_X[30] == 1'b1)) ? 
-    //    4'b1111 :
-    //    4'b0000;
 
     wire [DWIDTH-1:0] dmem_mask, imem_mask;
     mem_wb_select #(.N(DWIDTH))
@@ -404,21 +385,6 @@ module cpu #(
     assign imem_addra = alu_res_X[15:2];
     assign dmem_dina = rs2_X;
     assign imem_dina = rs2_X;
-
-    //wire [DWIDTH-1:0] mem_output = 32'b0;
-    
-    //wire [DWIDTH-1:0] mem_output;
-    //mem_output #(.WIDTH(DWIDTH))
-    //mem_res_unit (.dmem_out(dmem_douta),
-    //              .bios_out(bios_doutb),
-    //              .alu_addr(alu_res_X),
-    //              .uart_rx_valid(uart_rx_data_out_valid),
-    //              .uart_tx_ready(uart_tx_data_in_ready),
-    //              .uart_rx_out(uart_rx_data_out),
-    //              .cyc_ctr(32'b1),                          // TODO: cycle ctr
-    //              .instr_ctr(32'b1),                        // TODO: instr ctr
-    //              .mem_result(mem_output));
-
 
     ////////////////////////////////////////////////////
     //
@@ -508,7 +474,6 @@ module cpu #(
 
     wire [DWIDTH-1:0] res_WB;
     mux3 #(.N(DWIDTH))
-    //wb_mux (.in0(mem_output),
     wb_mux (.in0(mem_masked),
             .in1(alu_res_WB),
             .in2(pc_WB + 4),
