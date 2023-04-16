@@ -28,17 +28,15 @@ _start:
 # TODO: add more tests here
 add x0, x0, 1
 li x1, 44
-li x12, 12
-li x3, 761
-jalr x0, x1, 0
-li x13, 13
-li x31, 31
-li x30, 30
+li x2, 2 
+li x3, 3
+li x4, 4
+bne x3, x2, label
 li x29, 29
 li x28, 28
 li x16, 16
 li x17, 17
-li x11, 11
+label: li x11, 11
 li x14, 14
 
 

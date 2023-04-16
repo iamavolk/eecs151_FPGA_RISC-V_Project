@@ -19,6 +19,7 @@ module cpu #(
     localparam ROM_IDX_WIDTH = 6;
     localparam CTRL_KILL = 16'b0;
     localparam HJAL = 16'h2069;
+    localparam HJALR = 16'h2041;
     
     // BIOS Memory
     // Synchronous read: read takes one cycle
@@ -156,10 +157,11 @@ module cpu #(
     wire [DWIDTH-1:0] pc_IF;
     wire [DWIDTH-1:0] br_jalr_select;
     wire [DWIDTH-1:0] pc_sel_mux_out;
+    wire [DWIDTH-1:0] jal_select;
     wire [1:0] pc_select;
     mux3 #(.N(DWIDTH))
     pc_sel_mux (.in0(pc_IF + 4),
-                .in1(32'b0),
+                .in1(jal_select),
                 .in2(br_jalr_select),
                 .sel(pc_select),
                 .out(pc_sel_mux_out));
@@ -190,7 +192,17 @@ module cpu #(
                .sel(pc_IF[30]),
                .out(instr_IF));
 
-    wire instr_kill = pc_ID == 32'b0 ? 1'b1 : 1'b0;                             // TODO: Condition for INSTR KILL
+    wire is_ctrl_x_jal;
+    wire is_ctrl_x_jalr;
+    wire is_ctrl_wb_jalr;
+    //wire instr_kill = ((pc_ID == 32'b0) || is_ctrl_x_jal || is_ctrl_x_jalr || is_ctrl_wb_jalr) ? 1'b1 : 1'b0;                             // TODO: Condition for INSTR KILL
+    wire instr_kill_control;
+    wire [1:0] pc_select_wb_stage;
+    instr_kill_unit (.pc_sel_x(pc_select),
+                     .pc_sel_wb(pc_select_wb_stage),
+                     .instr_kill_res(instr_kill_control));
+
+    wire instr_kill = ((pc_ID == 32'b0) || instr_kill_control);
     wire [DWIDTH-1:0] instr_ID;
     mux2 #(.N(DWIDTH))
     instr_kill_mux (.in0(instr_IF),
@@ -226,6 +238,11 @@ module cpu #(
              .imm_sel(imm_sel_ID[1:0]),
              .imm(imm_ID));
     
+    jal_unit                                
+    j_imm_plus_pc_unit (.instr(instr_ID),
+                        .pc(pc_ID),
+		                .jal_pc(jal_select));
+
     ////////////////////////////////////////////////////
     //
     //     ID Stage END
@@ -296,6 +313,9 @@ module cpu #(
     //
     ////////////////////////////////////////////////////
 
+    assign is_ctrl_x_jal = (ctrl_X == HJAL);
+    assign is_ctrl_x_jalr = (ctrl_X == HJALR);
+
     // X-stage control signals
     wire BrLUn = ctrl_X[4];
     wire [3:0] ALUSel_X = ctrl_X[10:7];
@@ -345,11 +365,12 @@ module cpu #(
               .ALURes(alu_res_X));
  
     assign br_jalr_select = alu_res_X;
+    wire is_jal_id = (ctrl_ID == HJAL);
 
     pc_sel_unit (.instr_hex(ctrl_X),
                  .BrEq(BrEq),
                  .BrLt(BrLt),
-                 .is_jal_id(1'b0),
+                 .is_jal_id(is_jal_id),
                  .PCSel(pc_select));
     // MEMORY
     //assign dmem_wbea = 4'b0000;                         // TODO: DMEM write -- assign proper value based on LD / ST instructions
@@ -404,7 +425,16 @@ module cpu #(
     //     X Stage END 
     //
     ////////////////////////////////////////////////////
-     
+    
+    wire [1:0] pc_select_WB;
+    REGISTER_R_CE #(.N(2))
+    pc_select_X_WB (.q(pc_select_WB),
+                    .d(pc_select),
+                    .rst(rst),
+                    .ce(1'b1),
+                    .clk(clk));
+    assign pc_select_wb_stage = pc_select_WB; 
+
     wire [DWIDTH-1:0] alu_res_WB;
     REGISTER_R_CE #(.N(DWIDTH))
     alu_X_WB (.q(alu_res_WB),
@@ -450,6 +480,8 @@ module cpu #(
     //     WB Stage BEGIN 
     //
     ////////////////////////////////////////////////////
+
+    assign is_ctrl_wb_jalr = (ctrl_WB == HJALR);
 
     wire [DWIDTH-1:0] mem_output;
     mem_output #(.WIDTH(DWIDTH))
