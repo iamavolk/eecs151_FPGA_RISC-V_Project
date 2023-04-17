@@ -27,16 +27,14 @@ _start:
 
 # TODO: add more tests here
 add x0, x0, 1
-li x1, 1 
-li x2, 2
-li x3, 3
+li x1, 80
+li x2, 22
+sw x2, 0(x1)
 li x4, 4
-add x1, x1, x2
-add x1, x1, x3
-add x1, x1, x4
 li x29, 29
-li x28, 28
+lw x3, 0(x1)
 li x16, 16
+add x5, x4, x3
 li x17, 17
 li x14, 14
 

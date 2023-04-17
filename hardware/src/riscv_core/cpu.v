@@ -153,14 +153,23 @@ module cpu #(
     // TODO: Your code to implement a fully functioning RISC-V core
     // Add as many modules as you want
     // Feel free to move the memory modules around
-    
+  
     wire [DWIDTH-1:0] pc_IF;
+    wire [DWIDTH-1:0] pc_plus_four_res;
+    wire stall_sel;
+    mux2 #(.N(DWIDTH))
+    stall_mux (.in0(pc_IF + 4),
+	           .in1(pc_IF - 4),
+	           .sel(stall_sel),
+	           .out(pc_plus_four_res));
+
     wire [DWIDTH-1:0] br_jalr_select;
     wire [DWIDTH-1:0] pc_sel_mux_out;
     wire [DWIDTH-1:0] jal_select;
     wire [1:0] pc_select;
     mux3 #(.N(DWIDTH))
-    pc_sel_mux (.in0(pc_IF + 4),
+    //pc_sel_mux (.in0(pc_IF + 4),
+    pc_sel_mux (.in0(pc_plus_four_res),
                 .in1(jal_select),
                 .in2(br_jalr_select),
                 .sel(pc_select),
@@ -195,9 +204,11 @@ module cpu #(
     // Instr kill iff ctrl redirect (see unit)      
     wire instr_kill_control;
     wire [1:0] pc_select_wb_stage;
-    instr_kill_unit (.pc_sel_x(pc_select),
-                     .pc_sel_wb(pc_select_wb_stage),
-                     .instr_kill_res(instr_kill_control));
+    instr_kill_unit
+    instruction_kill_unit (.pc_sel_x(pc_select),
+                           .pc_sel_wb(pc_select_wb_stage),
+                           .stall_sel(stall_sel),
+                           .instr_kill_res(instr_kill_control));
 
     // Handling consistency immediately after reset
     wire instr_kill = ((pc_ID == 32'b0) || instr_kill_control);
@@ -367,16 +378,36 @@ module cpu #(
     assign csr_din = csr_X;
     assign csr_we = 1'b0;                              // TODO: change, subject to instr_WB 
 
+    // Forwarding unit for RS1 value 
+    wire [DWIDTH-1:0] fwd_A_out;
+    wire [DWIDTH-1:0] wb_res_A;
+    wire fw_X_A;
+    mux2 #(.N(DWIDTH))
+    fwd_A_mux (.in0(rs1_X),
+            .in1(wb_res_A),
+            .sel(1'b0),
+            .out(fwd_A_out));
+    
+    // Forwarding unit for RS2 value
+    wire [DWIDTH-1:0] fwd_B_out;
+    wire [DWIDTH-1:0] wb_res_B;
+    wire fw_X_B;
+    mux2 #(.N(DWIDTH))
+    fwd_B_mux (.in0(rs2_X),
+            .in1(wb_res_B),
+            .sel(1'b0),
+            .out(fwd_B_out));
+
     wire [DWIDTH-1:0] alu_A;
     mux2 #(.N(DWIDTH))
-    alu_A_mux (.in0(rs1_X),
+    alu_A_mux (.in0(fwd_A_out),
 	           .in1(pc_X),
 	           .sel(ASel),
 	           .out(alu_A));
 
     wire [DWIDTH-1:0] alu_B;
     mux2 #(.N(DWIDTH))
-    alu_B_mux (.in0(rs2_X),
+    alu_B_mux (.in0(fwd_B_out),
 	           .in1(imm_X),
 	           .sel(BSel),
 	           .out(alu_B));
@@ -389,6 +420,7 @@ module cpu #(
               .ALURes(alu_res_X));
     assign alu_rs1_res = alu_res_X;
     assign alu_rs2_res = alu_res_X;
+    
 
     //fwd_unit
     //forwarding (.rf_wen_X(RegWEn_X),
@@ -398,17 +430,25 @@ module cpu #(
     //            .fw_ID_A(fw_A), 
     //            .fw_ID_B(fw_B));
 
+    stall_unit
+    stall_instr_sel (.rd_X(instr_X[11:7]),
+                     .rs1_ID(instr_IF[19:15]),
+                     .rs2_ID(instr_IF[24:20]),
+                     .opcode(instr_X[6:0]),
+                     .stall(stall_sel));
+
     assign br_jalr_select = alu_res_X;
     wire is_jal_id = (ctrl_ID == HJAL);
 
-    pc_sel_unit (.instr_hex(ctrl_X),
-                 .BrEq(BrEq),
-                 .BrLt(BrLt),
-                 .is_jal_id(is_jal_id),
-                 .PCSel(pc_select));
+    pc_sel_unit
+    pc_select_unit (.instr_hex(ctrl_X),
+                    .BrEq(BrEq),
+                    .BrLt(BrLt),
+                    .is_jal_id(is_jal_id),
+                    .PCSel(pc_select));
 
-    wire [DWIDTH-1:0] dmem_mask, imem_mask;
-    mem_wb_select #(.N(DWIDTH))
+    wire [3:0] dmem_mask, imem_mask;
+    mem_wb_select #(.WIDTH(DWIDTH))
     mem_mask (.mem_write(MemRW),
               .instr(instr_X),
               .addr_alu_res(alu_res_X[31:28]),
@@ -500,8 +540,8 @@ module cpu #(
                   .mem_result(mem_output));
 
     wire [DWIDTH-1:0] mem_masked;
-    mem_load_mask #(.N(DWIDTH))
-    //mem_load_mask_eff #(.N(DWIDTH))
+    //mem_load_mask #(.N(DWIDTH))
+    mem_load_mask_eff #(.WIDTH(DWIDTH))
     mem_mask_unit (.addr(alu_res_WB[1:0]),
                    .func3(instr_WB[14:12]),
                    .mem_res(mem_output),
@@ -519,10 +559,18 @@ module cpu #(
             .out(res_WB));
     assign wb_rs1_res = res_WB;
     assign wb_rs2_res = res_WB;
+    assign wb_res_A = res_WB;
+    assign wb_res_B = res_WB; // new FWD mux
 
     assign wa = instr_WB[11:7];
     assign wd = res_WB;
     assign we = wa == X0_ADDR ? 1'b0 : RegWEn;
+    //stall_unit
+    //stall_instr_sel (.rd_X(instr_X[11:7]),
+    //                 .rs1_ID(instr_ID[19:15]),
+    //                 .rs2_ID(instr_ID[24:20]),   
+    //                 .opcode(instr_ID[6:0]), 
+    //                 .stall(stall_sel));
 
     fwd_unit
     forwarding (.rf_wen_X(RegWEn_X),
