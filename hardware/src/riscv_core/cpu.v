@@ -385,7 +385,7 @@ module cpu #(
     mux2 #(.N(DWIDTH))
     fwd_A_mux (.in0(rs1_X),
             .in1(wb_res_A),
-            .sel(1'b0),
+            .sel(fw_X_A),
             .out(fwd_A_out));
     
     // Forwarding unit for RS2 value
@@ -395,7 +395,7 @@ module cpu #(
     mux2 #(.N(DWIDTH))
     fwd_B_mux (.in0(rs2_X),
             .in1(wb_res_B),
-            .sel(1'b0),
+            .sel(fw_X_B),
             .out(fwd_B_out));
 
     wire [DWIDTH-1:0] alu_A;
@@ -575,10 +575,15 @@ module cpu #(
     fwd_unit
     forwarding (.rf_wen_X(RegWEn_X),
                 .rf_wen_WB(RegWEn),
+                .opcode(instr_WB[6:0]),
                 .rd_X(instr_X[11:7]),
                 .rd_WB(instr_WB[11:7]),
                 .rs1_ID(instr_ID[19:15]),
                 .rs2_ID(instr_ID[24:20]),
+                .rs1_X(instr_X[19:15]),
+                .rs2_X(instr_X[24:20]),
                 .fw_ID_A(fw_A), 
-                .fw_ID_B(fw_B));
+                .fw_ID_B(fw_B),
+                .fw_X_A(fw_X_A),
+                .fw_X_B(fw_X_B));
 endmodule
