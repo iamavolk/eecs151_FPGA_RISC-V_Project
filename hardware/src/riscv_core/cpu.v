@@ -220,21 +220,25 @@ module cpu #(
 
     // FW_ID_MUX_rs1
     wire [DWIDTH-1:0] alu_rs1_res;
+    wire [DWIDTH-1:0] wb_rs1_res;
     wire [DWIDTH-1:0] fwd_ID_rs1_res;
-    wire fw_A;
-    mux2 #(.N(DWIDTH))
+    wire [1:0] fw_A;
+    mux3 #(.N(DWIDTH))
     fw_ID_mux_rs1 (.in0(rd1),
                    .in1(alu_rs1_res),
+                   .in2(wb_rs1_res),
                    .sel(fw_A),
                    .out(fwd_ID_rs1_res));
 
     // FW_ID_MUX_rs2
     wire [DWIDTH-1:0] alu_rs2_res;
+    wire [DWIDTH-1:0] wb_rs2_res;
     wire [DWIDTH-1:0] fwd_ID_rs2_res;
-    wire fw_B;
-    mux2 #(.N(DWIDTH))
+    wire [1:0] fw_B;
+    mux3 #(.N(DWIDTH))
     fw_ID_mux_rs2 (.in0(rd2),
                    .in1(alu_rs2_res),
+                   .in2(wb_rs2_res),
                    .sel(fw_B),
                    .out(fwd_ID_rs2_res));
 
@@ -386,13 +390,13 @@ module cpu #(
     assign alu_rs1_res = alu_res_X;
     assign alu_rs2_res = alu_res_X;
 
-    fwd_unit
-    forwarding (.rf_wen_X(RegWEn_X),
-                .rd_X(instr_X[11:7]),
-                .rs1_ID(instr_ID[19:15]),
-                .rs2_ID(instr_ID[24:20]),
-                .fw_ID_A(fw_A), 
-                .fw_ID_B(fw_B));
+    //fwd_unit
+    //forwarding (.rf_wen_X(RegWEn_X),
+    //            .rd_X(instr_X[11:7]),
+    //            .rs1_ID(instr_ID[19:15]),
+    //            .rs2_ID(instr_ID[24:20]),
+    //            .fw_ID_A(fw_A), 
+    //            .fw_ID_B(fw_B));
 
     assign br_jalr_select = alu_res_X;
     wire is_jal_id = (ctrl_ID == HJAL);
@@ -513,9 +517,20 @@ module cpu #(
             .in2(pc_WB + 4),
             .sel(WBSel),
             .out(res_WB));
+    assign wb_rs1_res = res_WB;
+    assign wb_rs2_res = res_WB;
 
     assign wa = instr_WB[11:7];
     assign wd = res_WB;
     assign we = wa == X0_ADDR ? 1'b0 : RegWEn;
 
+    fwd_unit
+    forwarding (.rf_wen_X(RegWEn_X),
+                .rf_wen_WB(RegWEn),
+                .rd_X(instr_X[11:7]),
+                .rd_WB(instr_WB[11:7]),
+                .rs1_ID(instr_ID[19:15]),
+                .rs2_ID(instr_ID[24:20]),
+                .fw_ID_A(fw_A), 
+                .fw_ID_B(fw_B));
 endmodule
