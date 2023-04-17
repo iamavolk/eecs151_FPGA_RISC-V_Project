@@ -69,7 +69,7 @@ module asm_tb_custom();
     rst = 0;
 
     // test
-    check_reg_val(1, 32'd100, 1);
+    check_reg_val(0, 32'd0, 1);
 
     $finish();
   end

@@ -26,7 +26,7 @@ _start:
                     # Now we check that x1 contains 500 and x2 contains 100
 
  # y("PASS - test %d, got: %d for reg %d", test_num, expected_value, reg_number);TODO: add more tests here
-li x1, 100 	# 1) x1 = 100 = 64 + 32 + 4 = 1100100
+#li x1, 100 	# 1) x1 = 100 = 64 + 32 + 4 = 1100100
 #li x2, 40	# 2) x2 = 40 = 32 + 8 = 101000
 #li x11, 2	# 3) x11 = 2
 #li x12, 1	# 4) x12 = 1
@@ -49,6 +49,31 @@ li x1, 100 	# 1) x1 = 100 = 64 + 32 + 4 = 1100100
 #sltiu x15, x11, 1 # 21) x15 = x11<1 ->0
 #li x0, 1	# 22) x0 should stay 0
 #add x0, x0, 1	# 23) x0 should stay 0
+
+# custom test full
+lui x0, 32		# x0 stays 0
+li x1, 1024		# x1 = d1024 = h400
+lui x2, 32		# x2 = 2^5 << 12 = 2^17 = h20000
+addi x3, x1, -520	# x3 = 504
+srai x3, x3, 2		# x3 = 252; 252 / 4 = 63 (Samara)
+sw x1, 4(x3)		# addr 64(x3+1) = 1024
+lw x4, 4(x3)		# x4 = 1024
+sw x3, 0(x4)		# addr 400(x4) = 63
+sub x5, x3, x4 		# x5 = x3 - x4 = 63 - 1024 = -961 = 10000111111 = d1087
+srai x6, x5, 4		# x6 = 1807
+srli x8, x6, 10		# x8 = b1 = 1
+srli x7, x6, 3		# x7 = 225
+srli x7, x7, 3		# x7 = 28 = 11100
+slli x8, x8, 1		# x8 = b10 = 2
+addi x7, x7, 2		# x7 = 30 = b11110
+addi x7, x7, -2		# x7 = 28 = b11100
+sh x7, 0(x3)		# addr 63(x3) = b1110 = 14
+lb x9, 0(x3)		# x9 = 14 = b00001110
+sri x9, x9, x8		# x9 = b11 = 3
+
+
+
+
 
 
 
