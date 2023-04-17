@@ -26,22 +26,28 @@ _start:
                     # Now we check that x1 contains 500 and x2 contains 100
 
 # TODO: add more tests here
-#li x1, 64
-#li x2, 128
-#add x3, x1, x2
-#lw x4, 0(x3)
-#sw x4, 0(x2)
-#li x14, 14
-add x0, x0, 1         
-li x1, 80            # x1 = 80 = 0x20
-li x2, 128           # x2 = 128 = 0x10
-sw x2, 0(x1)         # 128 at addr 0x32
-li x4, 4             # x4 = 4
-li x29, 29           # x29 = 29
-lw x3, 0(x1)         # x3 = 128
-addi x5, x4, 3
-li x17, 17
+li x4, 80
+beq x1, x2, label
+sw x4, 0(x4)
+sw x4, 0(x4)
 li x14, 14
+li x14, 14
+li x14, 14
+li x14, 14
+add x0, x0, 1         
+label: li x14, 14
+#li x1, 80            # x1 = 80 = 0x20
+#li x2, 128           # x2 = 128 = 0x10
+#sw x2, 0(x1)         # 128 at addr 0x32
+#li x4, 4             # x4 = 4
+#li x29, 29           # x29 = 29
+#lw x3, 0(x1)         # x3 = 128
+#li x15, 15
+#addi x5, x3, 3
+#add x5, x5, x5
+#add x5, x5, x5
+#li x17, 17
+#li x14, 14
 
 
 

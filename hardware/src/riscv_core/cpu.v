@@ -153,14 +153,15 @@ module cpu #(
     // TODO: Your code to implement a fully functioning RISC-V core
     // Add as many modules as you want
     // Feel free to move the memory modules around
-  
+    
+
     wire [DWIDTH-1:0] pc_IF;
     wire [DWIDTH-1:0] pc_plus_four_res;
     wire stall_sel;
     mux2 #(.N(DWIDTH))
     stall_mux (.in0(pc_IF + 4),
 	           .in1(pc_IF - 4),
-	           .sel(stall_sel),
+	           .sel(1'b0),
 	           .out(pc_plus_four_res));
 
     wire [DWIDTH-1:0] br_jalr_select;
@@ -207,11 +208,12 @@ module cpu #(
     instr_kill_unit
     instruction_kill_unit (.pc_sel_x(pc_select),
                            .pc_sel_wb(pc_select_wb_stage),
-                           .stall_sel(stall_sel),
+                           .stall_sel(1'b0),
                            .instr_kill_res(instr_kill_control));
 
     // Handling consistency immediately after reset
-    wire instr_kill = ((pc_ID == 32'b0) || instr_kill_control);
+    wire instr_kill = ((pc_IF == 32'b0) || instr_kill_control);
+    //wire instr_kill = (instr_kill_control);
     wire [DWIDTH-1:0] instr_ID;
     mux2 #(.N(DWIDTH))
     instr_kill_mux (.in0(instr_IF),
@@ -376,7 +378,7 @@ module cpu #(
                .sel(instr_X[14]),
                .out(csr_X));
     assign csr_din = csr_X;
-    assign csr_we = 1'b0;                              // TODO: change, subject to instr_WB 
+    assign csr_we = (instr_X[6:0] == `OPC_CSR) ? 1'b1 : 1'b0;                              // TODO: change, subject to instr_WB 
 
     // Forwarding unit for RS1 value 
     wire [DWIDTH-1:0] fwd_A_out;
@@ -502,7 +504,7 @@ module cpu #(
                 .rst(rst),
                 .ce(1'b1),
                 .clk(clk));
-     
+    
     //wire [DWIDTH-1:0] csr_WB;
     //REGISTER_R_CE #(.N(DWIDTH))
     //csr_X_WB (.q(csr_WB),
@@ -525,6 +527,31 @@ module cpu #(
     //
     ////////////////////////////////////////////////////
 
+
+    ////////////////////////////////////////////////////
+    // Cycle Counter
+    wire [DWIDTH-1:0] cycle_counter_d;
+    wire [DWIDTH-1:0] cycle_counter_q;
+    REGISTER_R_CE #(.N(DWIDTH))
+    cyc_ctr (.q(cycle_counter_q),
+             .d(cycle_counter_d),
+             .rst(rst),
+             .ce(1'b1),
+             .clk(clk));
+    assign cycle_counter_d = cycle_counter_q + 1;
+    // Instruction Counter
+    wire [DWIDTH-1:0] instr_counter_d;
+    wire [DWIDTH-1:0] instr_counter_q;
+    REGISTER_R_CE #(.N(DWIDTH))
+    instr_ctr (.q(instr_counter_q),
+               .d(instr_counter_d),
+               .rst(rst),
+               .ce(1'b1),
+               .clk(clk));
+    assign instr_counter_d = (instr_WB[6:0] != `OPC_KILL) ? instr_counter_q : instr_counter_q + 1;
+    //
+    ////////////////////////////////////////////////////
+
     assign is_ctrl_wb_jalr = (ctrl_WB == HJALR);
 
     wire [DWIDTH-1:0] mem_output;
@@ -535,8 +562,8 @@ module cpu #(
                   .uart_rx_valid(uart_rx_data_out_valid),
                   .uart_tx_ready(uart_tx_data_in_ready),
                   .uart_rx_out(uart_rx_data_out),
-                  .cyc_ctr(32'b1),                          // TODO: cycle ctr
-                  .instr_ctr(32'b1),                        // TODO: instr ctr
+                  .cyc_ctr(cycle_counter_q),                          // TODO: cycle ctr
+                  .instr_ctr(instr_counter_q),                        // TODO: instr ctr
                   .mem_result(mem_output));
 
     wire [DWIDTH-1:0] mem_masked;
@@ -560,17 +587,11 @@ module cpu #(
     assign wb_rs1_res = res_WB;
     assign wb_rs2_res = res_WB;
     assign wb_res_A = res_WB;
-    assign wb_res_B = res_WB; // new FWD mux
+    assign wb_res_B = res_WB;
 
     assign wa = instr_WB[11:7];
     assign wd = res_WB;
     assign we = wa == X0_ADDR ? 1'b0 : RegWEn;
-    //stall_unit
-    //stall_instr_sel (.rd_X(instr_X[11:7]),
-    //                 .rs1_ID(instr_ID[19:15]),
-    //                 .rs2_ID(instr_ID[24:20]),   
-    //                 .opcode(instr_ID[6:0]), 
-    //                 .stall(stall_sel));
 
     fwd_unit
     forwarding (.rf_wen_X(RegWEn_X),
