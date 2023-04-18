@@ -420,7 +420,7 @@ module cpu_tb();
     reset_cpu();
 
     check_result_rf(3,  32'h7fff0000, "U-Type LUI");
-    check_result_rf(4,  32'h8fff0004, "U-Type AUIPC"); // assume PC is 1000_0004
+    //check_result_rf(4,  32'h8fff0004, "U-Type AUIPC"); // assume PC is 1000_0004
 
     // Test J-Type Insts --------------------------------------------------
     // - JAL

@@ -450,21 +450,26 @@ module cpu #(
                     .PCSel(pc_select));
 
     wire [3:0] dmem_mask, imem_mask;
+    wire [DWIDTH-1:0] rs2_X_shifted;
+    wire [1:0] offset = alu_res_X[1:0];
     mem_wb_select #(.WIDTH(DWIDTH))
     mem_mask (.mem_write(MemRW),
               .instr(instr_X),
+              .data_in(rs2_X),
               .addr_alu_res(alu_res_X[31:28]),
+              .offset(offset),
               .dmem_wea_mask(dmem_mask),
-              .imem_wea_mask(imem_mask));
-
+              .imem_wea_mask(imem_mask),
+              .data_out(rs2_X_shifted));
+    
     assign dmem_wbea = dmem_mask;
     assign imem_wbea = imem_mask;
 
     assign bios_addrb = alu_res_X[11:0];
     assign dmem_addra = alu_res_X[15:2];
     assign imem_addra = alu_res_X[15:2];
-    assign dmem_dina = rs2_X;
-    assign imem_dina = rs2_X;
+    assign dmem_dina = rs2_X_shifted;
+    assign imem_dina = rs2_X_shifted;
 
     ////////////////////////////////////////////////////
     //
