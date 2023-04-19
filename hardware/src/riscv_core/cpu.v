@@ -20,6 +20,7 @@ module cpu #(
     localparam CTRL_KILL = 16'b0;
     localparam HJAL = 16'h2069;
     localparam HJALR = 16'h2041;
+    localparam HCLEAR = 16'h0;
     
     // BIOS Memory
     // Synchronous read: read takes one cycle
@@ -156,21 +157,12 @@ module cpu #(
     
 
     wire [DWIDTH-1:0] pc_IF;
-    wire [DWIDTH-1:0] pc_plus_four_res;
-    wire stall_sel;
-    mux2 #(.N(DWIDTH))
-    stall_mux (.in0(pc_IF + 4),
-	           .in1(pc_IF - 4),
-	           .sel(1'b0),
-	           .out(pc_plus_four_res));
-
-    wire [DWIDTH-1:0] br_jalr_select;
-    wire [DWIDTH-1:0] pc_sel_mux_out;
     wire [DWIDTH-1:0] jal_select;
+    wire [DWIDTH-1:0] br_jalr_select;
     wire [1:0] pc_select;
+    wire [DWIDTH-1:0] pc_sel_mux_out;
     mux3 #(.N(DWIDTH))
-    //pc_sel_mux (.in0(pc_IF + 4),
-    pc_sel_mux (.in0(pc_plus_four_res),
+    pc_sel_mux (.in0(pc_IF + 4),
                 .in1(jal_select),
                 .in2(br_jalr_select),
                 .sel(pc_select),
@@ -204,20 +196,18 @@ module cpu #(
 
     // Instr kill iff ctrl redirect (see unit)      
     wire instr_kill_control;
-    wire [1:0] pc_select_wb_stage;
+    wire [1:0] pc_sel_check_ID;
+    wire [1:0] pc_select_jalrb_WB;
     instr_kill_unit
-    instruction_kill_unit (.pc_sel_x(pc_select),
-                           .pc_sel_wb(pc_select_wb_stage),
-                           .stall_sel(1'b0),
-                           .instr_kill_res(instr_kill_control));
+    instr_kill_ctrl (.pc_select_jal_x(pc_sel_check_ID),
+                     .pc_select_jalr_b_wb(pc_select_jalrb_WB),
+                     .instr_kill_res(instr_kill_control));
 
     // Handling consistency immediately after reset
     wire instr_kill = ((pc_IF == 32'b0) || instr_kill_control);
-    //wire instr_kill = (instr_kill_control);
     wire [DWIDTH-1:0] instr_ID;
     mux2 #(.N(DWIDTH))
     instr_kill_mux (.in0(instr_IF),
-                    //.in1(`INST_NOP),
                     .in1(`CLEAR_NOP),
                     .sel(instr_kill),
                     .out(instr_ID));
@@ -277,15 +267,26 @@ module cpu #(
     
     // JAL in ID-stage results in redirect    
     jal_unit                                
-    j_imm_plus_pc_unit (.instr(instr_ID),
-                        .pc(pc_ID),
-		                .jal_pc(jal_select));
+    jump_and_link (.instr(instr_ID),
+                   .pc(pc_ID),
+		           .jal_pc(jal_select));
+
+    wire [1:0] pc_sel_jal_ID = (ctrl_ID == HJAL) ? 2'b01 : 2'b00;
 
     ////////////////////////////////////////////////////
     //
     //     ID Stage END
     //
     ////////////////////////////////////////////////////
+
+    wire [1:0] pc_sel_jal_X;
+    REGISTER_R_CE #(.N(DWIDTH))
+    pc_sel_jal_ID_X (.q(pc_sel_jal_X),
+                     .d(pc_sel_jal_ID),
+                     .rst(rst),
+                     .ce(1'b1),
+                     .clk(clk));
+    assign pc_sel_check_ID = pc_sel_jal_X;
 
     wire [DWIDTH-1:0] imm_X;
     REGISTER_R_CE #(.N(DWIDTH))
@@ -295,9 +296,9 @@ module cpu #(
               .ce(1'b1),
               .clk(clk));
 
-    wire [CWIDTH-1:0] ctrl_X;
+    wire [CWIDTH-1:0] ctrl_X_pre;
     REGISTER_R_CE #(.N(CWIDTH))
-    ctrl_ID_X (.q(ctrl_X),
+    ctrl_ID_X (.q(ctrl_X_pre),
                .d(ctrl_ID),
                .rst(rst),
                .ce(1'b1),
@@ -351,6 +352,15 @@ module cpu #(
     //     X Stage BEGIN
     //
     ////////////////////////////////////////////////////
+    
+    // Ctrl kill mux
+    wire [CWIDTH-1:0] ctrl_X;
+    wire ctrl_kill_x = (pc_select_jalrb_WB == 2'b10) ? 1'b1 : 1'b0;
+    mux2 #(.N(CWIDTH))
+    ctrl_kill_mux (.in0(ctrl_X_pre),
+                   .in1(HCLEAR),
+                   .sel(ctrl_kill_x),
+                   .out(ctrl_X));
 
     // X-stage control signals
     wire BrLUn = ctrl_X[4];
@@ -422,31 +432,16 @@ module cpu #(
               .ALURes(alu_res_X));
     assign alu_rs1_res = alu_res_X;
     assign alu_rs2_res = alu_res_X;
-    
-
-    //fwd_unit
-    //forwarding (.rf_wen_X(RegWEn_X),
-    //            .rd_X(instr_X[11:7]),
-    //            .rs1_ID(instr_ID[19:15]),
-    //            .rs2_ID(instr_ID[24:20]),
-    //            .fw_ID_A(fw_A), 
-    //            .fw_ID_B(fw_B));
-
-    stall_unit
-    stall_instr_sel (.rd_X(instr_X[11:7]),
-                     .rs1_ID(instr_IF[19:15]),
-                     .rs2_ID(instr_IF[24:20]),
-                     .opcode(instr_X[6:0]),
-                     .stall(stall_sel));
 
     assign br_jalr_select = alu_res_X;
-    wire is_jal_id = (ctrl_ID == HJAL);
 
+    wire [1:0] pc_sel_x;
     pc_sel_unit
     pc_select_unit (.instr_hex(ctrl_X),
+                    .pc_sel_id(pc_sel_jal_ID),
                     .BrEq(BrEq),
                     .BrLt(BrLt),
-                    .is_jal_id(is_jal_id),
+                    .pc_sel_x(pc_sel_x),
                     .PCSel(pc_select));
 
     wire [3:0] dmem_mask, imem_mask;
@@ -471,6 +466,7 @@ module cpu #(
     assign dmem_dina = rs2_X_shifted;
     assign imem_dina = rs2_X_shifted;
 
+    wire bubble_inside = ((ctrl_X == 16'h0) || (ctrl_X == 16'h80));
     ////////////////////////////////////////////////////
     //
     //     X Stage END 
@@ -480,11 +476,11 @@ module cpu #(
     wire [1:0] pc_select_WB;
     REGISTER_R_CE #(.N(2))
     pc_select_X_WB (.q(pc_select_WB),
-                    .d(pc_select),
+                    .d(pc_sel_x),
                     .rst(rst),
                     .ce(1'b1),
                     .clk(clk));
-    assign pc_select_wb_stage = pc_select_WB; 
+    assign pc_select_jalrb_WB = pc_select_WB; 
 
     wire [DWIDTH-1:0] alu_res_WB;
     REGISTER_R_CE #(.N(DWIDTH))
@@ -556,8 +552,6 @@ module cpu #(
     assign instr_counter_d = (instr_WB[6:0] != `OPC_KILL) ? instr_counter_q : instr_counter_q + 1;
     //
     ////////////////////////////////////////////////////
-
-    assign is_ctrl_wb_jalr = (ctrl_WB == HJALR);
 
     wire [DWIDTH-1:0] mem_output;
     mem_output #(.WIDTH(DWIDTH))

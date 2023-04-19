@@ -1,10 +1,10 @@
-//`include "instr.vh"
 module pc_sel_unit(
     input [15:0] instr_hex,
-    input BrEq, BrLt, is_jal_id,
+    input [1:0] pc_sel_id,
+    input BrEq, BrLt,
+    output [1:0] pc_sel_x,
     output [1:0] PCSel
 );
-    //`include "instr.vh"
     localparam HBEQ = 16'h0064;
     localparam HBNE = 16'h4064;
     localparam HBLT = 16'h8064;
@@ -13,6 +13,7 @@ module pc_sel_unit(
     localparam HBGEU = 16'h4074;
     localparam HJALR = 16'h2041;
 
+    wire jal_id = (pc_sel_id == 2'b01) ? 1'b1 : 1'b0;
     wire br_jalr;
     assign br_jalr =
 	(instr_hex == HBEQ && BrEq) ||
@@ -21,11 +22,6 @@ module pc_sel_unit(
 	((instr_hex == HBGE || instr_hex == HBGEU) && ~BrLt) ||
 	(instr_hex == HJALR);
 
-    //assign PCSel =
-	// (is_jal_id) ? 2'b01 :
-	// (br_jalr ? 2'b10 : 2'b00);
-
-    assign PCSel = 
-        (br_jalr) ? 2'b10 : 
-        (is_jal_id ? 2'b01 : 2'b00);
+    assign pc_sel_x = (br_jalr) ? 2'b10 : 2'b00;
+    assign PCSel = (br_jalr) ? 2'b10 : (jal_id ? 2'b01 : 2'b00);
 endmodule

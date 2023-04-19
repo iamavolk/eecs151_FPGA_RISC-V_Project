@@ -51,16 +51,21 @@ _start:
 #add x0, x0, 1	# 23) x0 should stay 0
 
 # custom test full
-lui x0, 32		# x0 stays 0
+li x2, 3		# x0 stays 0
+li x3, 3
+li x12, 0x28
 addi x1, x0, 80
-jal x5, label
-lui x2, 0xb0bac
-addi x2, x2, 0xfe
-li x12, 12
-sb x2, 3(x1)
+li x17, 17
+beq x2, x3, label
+#jalr x2, x12, 
+jal x3, label
 li x13, 13
 li x16, 16
-label: li x15, 15
+li x18, 18
+li x19, 19
+li x20, 20
+label: li x21, 21
+li x22, 22
 li x14, 14
 
 
