@@ -37,7 +37,7 @@ module mem_wb_select #(
 
     assign dmem_wea_mask = (
         mem_write &&
-        ((addr_alu_res == 4'b0000) ||             // TODO: change 4'b0000 to 4'b0001 for SPEC
+        ((addr_alu_res == 4'b0001) ||             // TODO: change 4'b0000 to 4'b0001 for SPEC
         (addr_alu_res == 4'b0011))
     ) ? mask : 4'b0000;
 

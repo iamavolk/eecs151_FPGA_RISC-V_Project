@@ -168,7 +168,8 @@ module cpu #(
                 .sel(pc_select),
                 .out(pc_sel_mux_out));
 
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R_CE #(.N(DWIDTH), .INIT(RESET_PC))
+    //REGISTER_R_CE #(.N(DWIDTH))
     pc_reg (.q(pc_IF),
             .d(pc_sel_mux_out),
             .rst(rst),
@@ -450,7 +451,8 @@ module cpu #(
     mem_wb_select #(.WIDTH(DWIDTH))
     mem_mask (.mem_write(MemRW),
               .instr(instr_X),
-              .data_in(rs2_X),
+              //.data_in(rs2_X),
+              .data_in(fwd_B_out),
               .addr_alu_res(alu_res_X[31:28]),
               .offset(offset),
               .dmem_wea_mask(dmem_mask),
@@ -587,6 +589,7 @@ module cpu #(
     assign wb_rs2_res = res_WB;
     assign wb_res_A = res_WB;
     assign wb_res_B = res_WB;
+    assign wb_res_C = res_WB;
 
     assign wa = instr_WB[11:7];
     assign wd = res_WB;
