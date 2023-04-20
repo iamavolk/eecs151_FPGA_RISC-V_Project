@@ -1,4 +1,4 @@
-SUBDIRS := asm asm_custom bios  c_tests  echo  mmult  riscv-isa-tests  uart_parse
+SUBDIRS := asm  bios  c_tests  echo  mmult  riscv-isa-tests  uart_parse
 
 all: $(SUBDIRS)
 
