@@ -205,7 +205,7 @@ module cpu #(
                      .instr_kill_res(instr_kill_control));
 
     // Handling consistency immediately after reset
-    wire instr_kill = ((pc_IF == 32'b0) || instr_kill_control);
+    wire instr_kill = ((pc_IF == 32'h10000000) || (pc_IF == 32'h0) || instr_kill_control);
     wire [DWIDTH-1:0] instr_ID;
     mux2 #(.N(DWIDTH))
     instr_kill_mux (.in0(instr_IF),
