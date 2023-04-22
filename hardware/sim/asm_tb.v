@@ -61,7 +61,7 @@ module asm_tb();
 
     // Reset the CPU
     rst = 1;
-    repeat (5) @(posedge clk);             // Hold reset for 10 cycles
+    repeat (3) @(posedge clk);             // Hold reset for 10 cycles
     @(negedge clk);
     rst = 0;
 

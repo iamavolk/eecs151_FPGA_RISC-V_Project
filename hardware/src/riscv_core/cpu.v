@@ -371,12 +371,33 @@ module cpu #(
     wire MemRW = ctrl_X[11];
     wire RegWEn_X = ctrl_X[0];
 
+
+    // Forwarding mux A for BR after LOAD -- fwd into Branch Comparator 
+    wire [DWIDTH-1:0] fwd_branch_rs1;
+    wire [DWIDTH-1:0] wb_res_br_A;
+    wire fw_branch_A;
+    mux2 #(.N(DWIDTH))
+    fwd_br_mux_A (.in0(rs1_X),
+                  .in1(wb_res_br_A),
+                  .sel(fw_branch_A),
+                  .out(fwd_branch_rs1));
+    
+    // Forwarding mux B for BR after LOAD -- fwd into Branch Comparator 
+    wire [DWIDTH-1:0] fwd_branch_rs2;
+    wire [DWIDTH-1:0] wb_res_br_B;
+    wire fw_branch_B;
+    mux2 #(.N(DWIDTH))
+    fwd_br_mux_B (.in0(rs2_X),
+                  .in1(wb_res_br_B),
+                  .sel(fw_branch_B),
+                  .out(fwd_branch_rs2));
+
     // Branch Comparator
     wire BrEq;
     wire BrLt;
     branch_comp #(.N(DWIDTH))
-    br_comp (.br_data0(rs1_X),
-             .br_data1(rs2_X),
+    br_comp (.br_data0(fwd_branch_rs1), // changed from rs1_X to current arg
+             .br_data1(fwd_branch_rs2), // changed from rs2_X to current arg
              .BrUn(BrLUn),
              .BrEq(BrEq),
              .BrLt(BrLt));
@@ -426,6 +447,8 @@ module cpu #(
 	           .out(alu_B));
 
     wire [DWIDTH-1:0] alu_res_X;
+    wire uart_store_selected;
+
     alu #(.N(DWIDTH))
     alu_unit (.A(alu_A),
               .B(alu_B),
@@ -435,6 +458,8 @@ module cpu #(
     assign alu_rs2_res = alu_res_X;
 
     assign br_jalr_select = alu_res_X;
+    assign uart_store_selected = ((alu_res_X == 32'h80000008) && (instr_X[6:0] == `OPC_STORE));
+    assign uart_tx_data_in_valid = uart_store_selected; 
 
     wire [1:0] pc_sel_x;
     pc_sel_unit
@@ -469,12 +494,19 @@ module cpu #(
     assign imem_dina = rs2_X_shifted;
 
     wire bubble_inside = ((ctrl_X == 16'h0) || (ctrl_X == 16'h80));
+
+    //REGISTER_R_CE #(.N(DWIDTH))
+    //uart_tx_in_reg (.q(uart_tx_data_in),
+    //                .d(fwd_B_out[7:0]),
+    //                .rst(rst),
+    //                .ce(1'b1),
+    //                .clk(clk));
+    assign uart_tx_data_in = rs2_X[7:0];
     ////////////////////////////////////////////////////
     //
     //     X Stage END 
     //
     ////////////////////////////////////////////////////
-    
     wire [1:0] pc_select_WB;
     REGISTER_R_CE #(.N(2))
     pc_select_X_WB (.q(pc_select_WB),
@@ -556,6 +588,7 @@ module cpu #(
     ////////////////////////////////////////////////////
 
     wire [DWIDTH-1:0] mem_output;
+    wire uart_load_selected;
     mem_output #(.WIDTH(DWIDTH))
     mem_res_unit (.dmem_out(dmem_douta),
                   .bios_out(bios_doutb),
@@ -565,7 +598,10 @@ module cpu #(
                   .uart_rx_out(uart_rx_data_out),
                   .cyc_ctr(cycle_counter_q),                          // TODO: cycle ctr
                   .instr_ctr(instr_counter_q),                        // TODO: instr ctr
-                  .mem_result(mem_output));
+                  .mem_result(mem_output),
+                  .uart_load_selected(uart_load_selected));
+
+    assign uart_rx_data_out_ready = uart_load_selected;
 
     wire [DWIDTH-1:0] mem_masked;
     //mem_load_mask #(.N(DWIDTH))
@@ -590,6 +626,8 @@ module cpu #(
     assign wb_res_A = res_WB;
     assign wb_res_B = res_WB;
     assign wb_res_C = res_WB;
+    assign wb_res_br_A = res_WB;
+    assign wb_res_br_B = res_WB;
 
     assign wa = instr_WB[11:7];
     assign wd = res_WB;
@@ -608,5 +646,7 @@ module cpu #(
                 .fw_ID_A(fw_A), 
                 .fw_ID_B(fw_B),
                 .fw_X_A(fw_X_A),
-                .fw_X_B(fw_X_B));
+                .fw_X_B(fw_X_B),
+                .fw_X_br_A(fw_branch_A),
+                .fw_X_br_B(fw_branch_B));
 endmodule

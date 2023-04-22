@@ -4,9 +4,9 @@
 
 int main(void) {
     csr_tohost(0);
-    char str[10] = "EECS151";
+    char str[10] = "a";
 
-    if (strcmp(str ,"EECS151") == 0) {
+    if (strcmp(str ,"a") == 0) {
         // pass
         csr_tohost(1);
     } else {

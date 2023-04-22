@@ -50,15 +50,32 @@ _start:
 #li x0, 1	# 22) x0 should stay 0
 #add x0, x0, 1	# 23) x0 should stay 0
 
-# custom test full
-li x1, 84
-li x2, 1024
-li x3, 80
-li x17, 17
-sw x2, 0(x3)
-li x13, 13
-lw x31, 0(x3)
-sw x31, 0(x1)
-li x22, 22
+#li x3, 7
+#li x1, -1
+#li x2, -2
+#bge x1, x2, label1
+#bne x0, x3, fail
+#label2: bne x0, x3, next
+#label1: bge x1, x2, label2
+#bne x0, x3, fail
+#fail: li x16, 16
+#pass: li x15, 15
+#next: li x14, 14
+
+li x3, 0x61
+li x1, 0x10000080
+li x31, 31
+li x30, 30
+sw x3, 0(x1)
+li x29, 29
+li x28, 28
+lbu x11, 0(x1)
+li x27, 27
+lbu x10, 0(x1)
+bne x11, x10, label
+#bne x14, x7, fail
+#j not_fail
 li x14, 14
+label: li x13, 13
+#not_fail: li x14, 3
 #done: j done

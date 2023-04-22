@@ -9,7 +9,8 @@ module mem_output #(
     input  [7:0] uart_rx_out,
     input  [WIDTH-1:0] cyc_ctr,
     input  [WIDTH-1:0] instr_ctr,
-    output [WIDTH-1:0] mem_result  
+    output [WIDTH-1:0] mem_result,
+    output uart_load_selected
 );
     
     wire [WIDTH-1:0] ctr_value;
@@ -42,6 +43,8 @@ module mem_output #(
                     .in2(io_value),
                     .sel(alu_addr[31:30]),
                     .out(mem_result));
-
+    assign uart_load_selected = (alu_addr[4] == 1'b0)
+                                && (alu_addr[31:30] == 2'b10)
+                                && (alu_addr[2] == 1'b1);
 endmodule
 

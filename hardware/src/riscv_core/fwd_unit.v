@@ -12,7 +12,9 @@ module fwd_unit(
     output [1:0] fw_ID_A,
     output [1:0] fw_ID_B,
     output fw_X_A,
-    output fw_X_B
+    output fw_X_B,
+    output fw_X_br_A,
+    output fw_X_br_B
 );
     //assign fw_ID_A = ((rf_wen_X == 1'b1) &&
     //                  (rd_X != 5'd0) &&
@@ -44,4 +46,7 @@ module fwd_unit(
 
     assign fw_X_A = ((opcode == `OPC_LOAD) && (rd_WB != 5'd0) && (rd_WB == rs1_X)) ? 1'b1 : 1'b0;
     assign fw_X_B = ((opcode == `OPC_LOAD) && (rd_WB != 5'd0) && (rd_WB == rs2_X)) ? 1'b1 : 1'b0;
+
+    assign fw_X_br_A = ((opcode == `OPC_LOAD) && (rd_WB != 5'd0) && (rd_WB == rs1_X)) ? 1'b1 : 1'b0;
+    assign fw_X_br_B = ((opcode == `OPC_LOAD) && (rd_WB != 5'd0) && (rd_WB == rs2_X)) ? 1'b1 : 1'b0;
 endmodule
