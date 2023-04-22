@@ -185,7 +185,7 @@ module cpu #(
 	          .clk(clk));
 
     assign imem_addrb = pc_IF[15:2];
-    assign bios_addra = pc_IF[11:0];
+    assign bios_addra = pc_IF[13:2];
 
     // Instruction fetch
     wire [DWIDTH-1:0] instr_IF;
@@ -205,7 +205,7 @@ module cpu #(
                      .instr_kill_res(instr_kill_control));
 
     // Handling consistency immediately after reset
-    wire instr_kill = ((pc_IF == 32'h10000000) || (pc_IF == 32'h0) || instr_kill_control);
+    wire instr_kill = ((pc_IF == 32'h10000000) || (pc_IF == 32'h0) || (pc_IF == 32'h40000000) || instr_kill_control);
     wire [DWIDTH-1:0] instr_ID;
     mux2 #(.N(DWIDTH))
     instr_kill_mux (.in0(instr_IF),
@@ -458,6 +458,7 @@ module cpu #(
     assign alu_rs2_res = alu_res_X;
 
     assign br_jalr_select = alu_res_X;
+
     assign uart_store_selected = ((alu_res_X == 32'h80000008) && (instr_X[6:0] == `OPC_STORE));
     assign uart_tx_data_in_valid = uart_store_selected; 
 
@@ -487,7 +488,7 @@ module cpu #(
     assign dmem_wbea = dmem_mask;
     assign imem_wbea = imem_mask;
 
-    assign bios_addrb = alu_res_X[11:0];
+    assign bios_addrb = alu_res_X[13:2];
     assign dmem_addra = alu_res_X[15:2];
     assign imem_addra = alu_res_X[15:2];
     assign dmem_dina = rs2_X_shifted;
@@ -495,13 +496,7 @@ module cpu #(
 
     wire bubble_inside = ((ctrl_X == 16'h0) || (ctrl_X == 16'h80));
 
-    //REGISTER_R_CE #(.N(DWIDTH))
-    //uart_tx_in_reg (.q(uart_tx_data_in),
-    //                .d(fwd_B_out[7:0]),
-    //                .rst(rst),
-    //                .ce(1'b1),
-    //                .clk(clk));
-    assign uart_tx_data_in = rs2_X[7:0];
+    assign uart_tx_data_in = fwd_B_out[7:0];
     ////////////////////////////////////////////////////
     //
     //     X Stage END 
