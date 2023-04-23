@@ -48,7 +48,6 @@ module asm_tb();
   initial begin
     `ifndef IVERILOG
         $vcdpluson;
-        $vcdplusmemon;
     `endif
     `ifdef IVERILOG
         $dumpfile("asm_tb.fst");
@@ -61,19 +60,20 @@ module asm_tb();
 
     // Reset the CPU
     rst = 1;
-    repeat (3) @(posedge clk);             // Hold reset for 10 cycles
+    repeat (10) @(posedge clk);             // Hold reset for 10 cycles
     @(negedge clk);
     rst = 0;
 
     // Your processor should begin executing the code in /software/asm/start.s
 
-    wait_for_reg_to_equal(14, 32'd14);           // add x0 x0 1
-    check_reg(14, 32'd14, 1);
+    // Test ADD
+    wait_for_reg_to_equal(20, 32'd1);       // Run the simulation until the flag is set to 1
+    check_reg(1, 32'd300, 1);               // Verify that x1 contains 300
 
     // Test BEQ
-    //wait_for_reg_to_equal(20, 32'd2);       // Run the simulation until the flag is set to 2
-    //check_reg(1, 32'd500, 2);               // Verify that x1 contains 500
-    //check_reg(2, 32'd100, 3);               // Verify that x2 contains 100
+    wait_for_reg_to_equal(20, 32'd2);       // Run the simulation until the flag is set to 2
+    check_reg(1, 32'd500, 2);               // Verify that x1 contains 500
+    check_reg(2, 32'd100, 3);               // Verify that x2 contains 100
     $display("ALL ASSEMBLY TESTS PASSED!");
     $finish();
   end
