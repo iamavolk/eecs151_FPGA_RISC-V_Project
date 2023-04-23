@@ -265,9 +265,9 @@ module cpu #(
     imm_gen (.instr(instr_ID),
              .imm_sel(imm_sel_ID[1:0]),
              .imm(imm_ID));
-    
-    // JAL in ID-stage results in redirect    
-    jal_unit                                
+
+    // JAL in ID-stage results in redirect
+    jal_unit
     jump_and_link (.instr(instr_ID),
                    .pc(pc_ID),
 		           .jal_pc(jal_select));
@@ -281,7 +281,7 @@ module cpu #(
     ////////////////////////////////////////////////////
 
     wire [1:0] pc_sel_jal_X;
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R_CE #(.N(2))
     pc_sel_jal_ID_X (.q(pc_sel_jal_X),
                      .d(pc_sel_jal_ID),
                      .rst(rst),
@@ -461,7 +461,7 @@ module cpu #(
 
     assign uart_store_selected = ((alu_res_X == 32'h80000008) && (instr_X[6:0] == `OPC_STORE));
     assign uart_tx_data_in_valid = uart_store_selected;                                                  // TODO: Drives uart at X stage --> check with TAs is incorrect / need to drive at WB stage?
-    assign ctr_reset = (alu_res_X == 32'h80000018);
+    wire ctr_reset = (alu_res_X == 32'h80000018);
 
 
     // PC select unit, based on the previous (jal vs non-jal) and current (jalr or branch) result. This result propagates to WB   
@@ -641,7 +641,6 @@ module cpu #(
     assign wb_rs2_res = res_WB;
     assign wb_res_A = res_WB;
     assign wb_res_B = res_WB;
-    assign wb_res_C = res_WB;
     assign wb_res_br_A = res_WB;
     assign wb_res_br_B = res_WB;
 
