@@ -582,7 +582,7 @@ module cpu #(
     REGISTER_R_CE #(.N(DWIDTH), .INIT(32'd0))
     cyc_ctr (.q(cycle_counter_q),
              .d(cycle_counter_d),
-             .rst(ctr_reset),
+             .rst(ctr_reset || rst),
              .ce(1'b1),
              .clk(clk));
     assign cycle_counter_d = cycle_counter_q + 1;
@@ -592,7 +592,7 @@ module cpu #(
     REGISTER_R_CE #(.N(DWIDTH), .INIT(32'b0))
     instr_ctr (.q(instr_counter_q),
                .d(instr_counter_d),
-               .rst(ctr_reset),
+               .rst(ctr_reset || rst),
                .ce(~bubble_inside_wb),
                .clk(clk));
     //assign instr_counter_d = (instr_WB[6:0] != `OPC_KILL) ? instr_counter_q : instr_counter_q + 1;

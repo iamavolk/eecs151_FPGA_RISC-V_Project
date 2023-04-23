@@ -31,7 +31,10 @@ module mem_wb_select #(
                 mask = 4'b1111;
                 data_out_reg = data_in;
             end
-            default: mask = 4'b0000;
+            default: begin
+                mask = 4'b0000;
+                data_out_reg = data_in;
+            end   
         endcase
     end
 

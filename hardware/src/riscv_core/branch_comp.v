@@ -41,6 +41,9 @@ always @(*) begin
         else if (~b0 && ~b1) begin
             BrLt_res = br_data0 < br_data1;   
         end
+        else begin
+            BrLt_res = 1'b0;
+        end
     end
 end
 
