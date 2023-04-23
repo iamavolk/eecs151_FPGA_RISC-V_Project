@@ -88,8 +88,8 @@ module cpu #(
     ////
     //////////////////////////////////////////////////
     
-    assign bios_ena = 1'b1;     // TODO: Attach enable to reset
-    assign bios_enb = 1'b1;     // TODO: Check synchronous operation of BIOS/IMEM vs Pipeline Regisers  
+    assign bios_ena = 1'b1;    
+    assign bios_enb = 1'b1;     
     assign dmem_ena = 1'b1;
     assign imem_ena = 1'b1;
     assign imem_enb = ~rst;
@@ -460,8 +460,10 @@ module cpu #(
     assign br_jalr_select = alu_res_X;
 
     assign uart_store_selected = ((alu_res_X == 32'h80000008) && (instr_X[6:0] == `OPC_STORE));
-    assign uart_tx_data_in_valid = uart_store_selected; 
+    assign uart_tx_data_in_valid = uart_store_selected;                                                  // TODO: Drives uart at X stage --> check with TAs is incorrect / need to drive at WB stage?
 
+
+    // PC select unit, based on the previous (jal vs non-jal) and current (jalr or branch) result. This result propagates to WB   
     wire [1:0] pc_sel_x;
     pc_sel_unit
     pc_select_unit (.instr_hex(ctrl_X),
@@ -471,6 +473,7 @@ module cpu #(
                     .pc_sel_x(pc_sel_x),
                     .PCSel(pc_select));
 
+    // Mask selector, pre-MEM entry data processing
     wire [3:0] dmem_mask, imem_mask;
     wire [DWIDTH-1:0] rs2_X_shifted;
     wire [1:0] offset = alu_res_X[1:0];
@@ -485,18 +488,18 @@ module cpu #(
               .imem_wea_mask(imem_mask),
               .data_out(rs2_X_shifted));
     
+    // Enter signals to BIOS, IMEM, DMEM, MMIO (uart)
+    assign bios_addrb = alu_res_X[13:2];
     assign dmem_wbea = dmem_mask;
     assign imem_wbea = imem_mask;
-
-    assign bios_addrb = alu_res_X[13:2];
     assign dmem_addra = alu_res_X[15:2];
     assign imem_addra = alu_res_X[15:2];
     assign dmem_dina = rs2_X_shifted;
     assign imem_dina = rs2_X_shifted;
-
-    wire bubble_inside = ((ctrl_X == 16'h0) || (ctrl_X == 16'h80));
-
     assign uart_tx_data_in = fwd_B_out[7:0];
+
+    wire bubble_inside = ((ctrl_X == 16'h0) || (ctrl_X == 16'h80));                      // TODO : Use bubble_inside to determine if +1 is needed for instruction counter at commit point (WB stage)
+
     ////////////////////////////////////////////////////
     //
     //     X Stage END 
@@ -534,7 +537,8 @@ module cpu #(
                 .rst(rst),
                 .ce(1'b1),
                 .clk(clk));
-    
+
+    // CSR after X, commit point past-WB stage, currently works without
     //wire [DWIDTH-1:0] csr_WB;
     //REGISTER_R_CE #(.N(DWIDTH))
     //csr_X_WB (.q(csr_WB),
@@ -559,6 +563,8 @@ module cpu #(
 
 
     ////////////////////////////////////////////////////
+    // COUNTERS
+    ////////////////////////////////////////////////////
     // Cycle Counter
     wire [DWIDTH-1:0] cycle_counter_d;
     wire [DWIDTH-1:0] cycle_counter_q;
@@ -579,7 +585,6 @@ module cpu #(
                .ce(1'b1),
                .clk(clk));
     assign instr_counter_d = (instr_WB[6:0] != `OPC_KILL) ? instr_counter_q : instr_counter_q + 1;
-    //
     ////////////////////////////////////////////////////
 
     wire [DWIDTH-1:0] mem_output;
@@ -587,17 +592,18 @@ module cpu #(
     mem_output #(.WIDTH(DWIDTH))
     mem_res_unit (.dmem_out(dmem_douta),
                   .bios_out(bios_doutb),
-                  .alu_addr(alu_res_WB),                    // TODO: check alu_res_X vs alu_res_WB
+                  .alu_addr(alu_res_WB),                                                         // TODO: check alu_res_X vs alu_res_WB / check with test suite, possibly WB is correct
                   .uart_rx_valid(uart_rx_data_out_valid),
                   .uart_tx_ready(uart_tx_data_in_ready),
                   .uart_rx_out(uart_rx_data_out),
-                  .cyc_ctr(cycle_counter_q),                          // TODO: cycle ctr
-                  .instr_ctr(instr_counter_q),                        // TODO: instr ctr
+                  .cyc_ctr(cycle_counter_q),                                                     // TODO: cycle ctr
+                  .instr_ctr(instr_counter_q),                                                   // TODO: instr ctr
                   .mem_result(mem_output),
                   .uart_load_selected(uart_load_selected));
 
-    assign uart_rx_data_out_ready = uart_load_selected;
+    assign uart_rx_data_out_ready = uart_load_selected;                                          // TODO: uart_RX is driven at WB stage, whereas uart_TX is at X stage ?
 
+    // Memory output masking for lw, lh(u), lb(u)
     wire [DWIDTH-1:0] mem_masked;
     //mem_load_mask #(.N(DWIDTH))
     mem_load_mask_eff #(.WIDTH(DWIDTH))
@@ -609,6 +615,7 @@ module cpu #(
     wire RegWEn = ctrl_WB[0];
     wire [1:0] WBSel = ctrl_WB[13:12];
 
+    // Write-back selector
     wire [DWIDTH-1:0] res_WB;
     mux3 #(.N(DWIDTH))
     wb_mux (.in0(mem_masked),
@@ -616,6 +623,8 @@ module cpu #(
             .in2(pc_WB + 4),
             .sel(WBSel),
             .out(res_WB));
+
+    // Writeback wire forwared to X, ID stages
     assign wb_rs1_res = res_WB;
     assign wb_rs2_res = res_WB;
     assign wb_res_A = res_WB;
@@ -624,10 +633,12 @@ module cpu #(
     assign wb_res_br_A = res_WB;
     assign wb_res_br_B = res_WB;
 
+    // RegFile signals. wa = addr0, wd = data0, we is asserted unless rd = x0 
     assign wa = instr_WB[11:7];
     assign wd = res_WB;
     assign we = wa == X0_ADDR ? 1'b0 : RegWEn;
 
+    // Forwarding unit, needs optimization
     fwd_unit
     forwarding (.rf_wen_X(RegWEn_X),
                 .rf_wen_WB(RegWEn),
