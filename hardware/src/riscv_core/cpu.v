@@ -461,6 +461,7 @@ module cpu #(
 
     assign uart_store_selected = ((alu_res_X == 32'h80000008) && (instr_X[6:0] == `OPC_STORE));
     assign uart_tx_data_in_valid = uart_store_selected;                                                  // TODO: Drives uart at X stage --> check with TAs is incorrect / need to drive at WB stage?
+    assign ctr_reset = (alu_res_X == 32'h80000018);
 
 
     // PC select unit, based on the previous (jal vs non-jal) and current (jalr or branch) result. This result propagates to WB   
@@ -498,13 +499,23 @@ module cpu #(
     assign imem_dina = rs2_X_shifted;
     assign uart_tx_data_in = fwd_B_out[7:0];
 
-    wire bubble_inside = ((ctrl_X == 16'h0) || (ctrl_X == 16'h80));                      // TODO : Use bubble_inside to determine if +1 is needed for instruction counter at commit point (WB stage)
+    //wire bubble_inside = ((ctrl_X == 16'h0) || (ctrl_X == 16'h80));                      // TODO : Use bubble_inside to determine if +1 is needed for instruction counter at commit point (WB stage)
+    //wire bubble_inside = ((ctrl_X == 16'h25) || (ctrl_X == 16'h80));                      // TODO : Use bubble_inside to determine if +1 is needed for instruction counter at commit point (WB stage)
+    wire bubble_inside = ((instr_X == `INST_NOP) || (instr_X == `CLEAR_NOP) || (ctrl_X == HCLEAR)) ? 1'b1: 1'b0;                      // TODO : Use bubble_inside to determine if +1 is needed for instruction counter at commit point (WB stage)
 
     ////////////////////////////////////////////////////
     //
     //     X Stage END 
     //
     ////////////////////////////////////////////////////
+    wire bubble_inside_wb;
+    REGISTER_R_CE #(.N(1), .INIT(1'b0))
+    bubble_X_WB (.q(bubble_inside_wb),
+                 .d(bubble_inside),
+                 .rst(rst),
+                 .ce(1'b1),
+                 .clk(clk));
+
     wire [1:0] pc_select_WB;
     REGISTER_R_CE #(.N(2))
     pc_select_X_WB (.q(pc_select_WB),
@@ -568,23 +579,24 @@ module cpu #(
     // Cycle Counter
     wire [DWIDTH-1:0] cycle_counter_d;
     wire [DWIDTH-1:0] cycle_counter_q;
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R_CE #(.N(DWIDTH), .INIT(32'd0))
     cyc_ctr (.q(cycle_counter_q),
              .d(cycle_counter_d),
-             .rst(rst),
+             .rst(ctr_reset),
              .ce(1'b1),
              .clk(clk));
     assign cycle_counter_d = cycle_counter_q + 1;
     // Instruction Counter
     wire [DWIDTH-1:0] instr_counter_d;
     wire [DWIDTH-1:0] instr_counter_q;
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R_CE #(.N(DWIDTH), .INIT(32'b0))
     instr_ctr (.q(instr_counter_q),
                .d(instr_counter_d),
-               .rst(rst),
-               .ce(1'b1),
+               .rst(ctr_reset),
+               .ce(~bubble_inside_wb),
                .clk(clk));
-    assign instr_counter_d = (instr_WB[6:0] != `OPC_KILL) ? instr_counter_q : instr_counter_q + 1;
+    //assign instr_counter_d = (instr_WB[6:0] != `OPC_KILL) ? instr_counter_q : instr_counter_q + 1;
+    assign instr_counter_d = instr_counter_q + 1;
     ////////////////////////////////////////////////////
 
     wire [DWIDTH-1:0] mem_output;
