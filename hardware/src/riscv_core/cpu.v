@@ -412,36 +412,16 @@ module cpu #(
     assign csr_din = csr_X;
     assign csr_we = (instr_X[6:0] == `OPC_CSR) ? 1'b1 : 1'b0;                              // TODO: change, subject to instr_WB 
 
-    // Forwarding unit for RS1 value 
-    wire [DWIDTH-1:0] fwd_A_out;
-    wire [DWIDTH-1:0] wb_res_A;
-    wire fw_X_A;
-    mux2 #(.N(DWIDTH))
-    fwd_A_mux (.in0(rs1_X),
-            .in1(wb_res_A),
-            .sel(fw_X_A),
-            .out(fwd_A_out));
-    
-    // Forwarding unit for RS2 value
-    wire [DWIDTH-1:0] fwd_B_out;
-    wire [DWIDTH-1:0] wb_res_B;
-    wire fw_X_B;
-    mux2 #(.N(DWIDTH))
-    fwd_B_mux (.in0(rs2_X),
-            .in1(wb_res_B),
-            .sel(fw_X_B),
-            .out(fwd_B_out));
-
     wire [DWIDTH-1:0] alu_A;
     mux2 #(.N(DWIDTH))
-    alu_A_mux (.in0(fwd_A_out),
+    alu_A_mux (.in0(fwd_branch_rs1),
 	           .in1(pc_X),
 	           .sel(ASel),
 	           .out(alu_A));
 
     wire [DWIDTH-1:0] alu_B;
     mux2 #(.N(DWIDTH))
-    alu_B_mux (.in0(fwd_B_out),
+    alu_B_mux (.in0(fwd_branch_rs2),
 	           .in1(imm_X),
 	           .sel(BSel),
 	           .out(alu_B));
@@ -482,7 +462,7 @@ module cpu #(
     mem_mask (.mem_write(MemRW),
               .instr(instr_X),
               //.data_in(rs2_X),
-              .data_in(fwd_B_out),
+              .data_in(fwd_branch_rs2),
               .addr_alu_res(alu_res_X[31:28]),
               .offset(offset),
               .dmem_wea_mask(dmem_mask),
@@ -497,7 +477,7 @@ module cpu #(
     assign imem_addra = alu_res_X[15:2];
     assign dmem_dina = rs2_X_shifted;
     assign imem_dina = rs2_X_shifted;
-    assign uart_tx_data_in = fwd_B_out[7:0];
+    assign uart_tx_data_in = fwd_branch_rs2[7:0];
 
     //wire bubble_inside = ((ctrl_X == 16'h0) || (ctrl_X == 16'h80));                      // TODO : Use bubble_inside to determine if +1 is needed for instruction counter at commit point (WB stage)
     //wire bubble_inside = ((ctrl_X == 16'h25) || (ctrl_X == 16'h80));                      // TODO : Use bubble_inside to determine if +1 is needed for instruction counter at commit point (WB stage)
@@ -639,8 +619,6 @@ module cpu #(
     // Writeback wire forwared to X, ID stages
     assign wb_rs1_res = res_WB;
     assign wb_rs2_res = res_WB;
-    assign wb_res_A = res_WB;
-    assign wb_res_B = res_WB;
     assign wb_res_br_A = res_WB;
     assign wb_res_br_B = res_WB;
 
@@ -662,8 +640,8 @@ module cpu #(
                 .rs2_X(instr_X[24:20]),
                 .fw_ID_A(fw_A), 
                 .fw_ID_B(fw_B),
-                .fw_X_A(fw_X_A),
-                .fw_X_B(fw_X_B),
+                .fw_X_A(),
+                .fw_X_B(),
                 .fw_X_br_A(fw_branch_A),
                 .fw_X_br_B(fw_branch_B));
 endmodule
