@@ -640,8 +640,6 @@ module cpu #(
                 .rs2_X(instr_X[24:20]),
                 .fw_ID_A(fw_A), 
                 .fw_ID_B(fw_B),
-                .fw_X_A(),
-                .fw_X_B(),
                 .fw_X_br_A(fw_branch_A),
                 .fw_X_br_B(fw_branch_B));
 endmodule
