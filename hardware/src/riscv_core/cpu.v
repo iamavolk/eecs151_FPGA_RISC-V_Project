@@ -245,16 +245,20 @@ module cpu #(
                    .out(fwd_ID_rs2_res));
 
     // Control Decoder
-    wire [ROM_IDX_WIDTH-1:0] rom_index;
-    control_decode
-    ctrl_dec (.instr(instr_ID),
-              .ROMIn(rom_index));
+    //wire [ROM_IDX_WIDTH-1:0] rom_index;
+    //control_decode
+    //ctrl_dec (.instr(instr_ID),
+    //          .ROMIn(rom_index));
 
     // Control ROM
     wire [CWIDTH-1:0] ctrl_ID;
-    control_unit
-    control(.dec_instr_code(rom_index),
-	        .hex_instr_code(ctrl_ID));
+    //control_unit
+    //control(.dec_instr_code(rom_index),
+	//        .hex_instr_code(ctrl_ID));
+
+    control_decode_2
+    ctrl_dec(.instr(instr_ID),
+             .hex_control(ctrl_ID));
 
     // Immediate Generator 
     wire [DWIDTH-1:0] imm_ID;
@@ -360,7 +364,6 @@ module cpu #(
     wire BSel = ctrl_X[6];
     wire MemRW = ctrl_X[11];
     wire RegWEn_X = ctrl_X[0];
-
 
     // Forwarding mux A for BR after LOAD -- fwd into Branch Comparator 
     wire [DWIDTH-1:0] fwd_branch_rs1;
