@@ -168,20 +168,18 @@ module cpu #(
                 .sel(pc_select),
                 .out(pc_sel_mux_out));
 
-    REGISTER_R_CE #(.N(DWIDTH), .INIT(RESET_PC))
+    REGISTER_R #(.N(DWIDTH), .INIT(RESET_PC))
     //REGISTER_R_CE #(.N(DWIDTH))
     pc_reg (.q(pc_IF),
             .d(pc_sel_mux_out),
             .rst(rst),
-            .ce(1'b1),
             .clk(clk));
 
     wire [DWIDTH-1:0] pc_ID;
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R #(.N(DWIDTH))
     pc_IF_ID (.q(pc_ID),
 	          .d(pc_IF),
 	          .rst(rst),
-	          .ce(1'b1),
 	          .clk(clk));
 
     assign imem_addrb = pc_IF[15:2];
@@ -281,71 +279,63 @@ module cpu #(
     ////////////////////////////////////////////////////
 
     wire [1:0] pc_sel_jal_X;
-    REGISTER_R_CE #(.N(2))
+    REGISTER_R #(.N(2))
     pc_sel_jal_ID_X (.q(pc_sel_jal_X),
                      .d(pc_sel_jal_ID),
                      .rst(rst),
-                     .ce(1'b1),
                      .clk(clk));
     assign pc_sel_check_ID = pc_sel_jal_X;
 
     wire [DWIDTH-1:0] imm_X;
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R #(.N(DWIDTH))
     imm_ID_X (.q(imm_X),
               .d(imm_ID),
               .rst(rst),
-              .ce(1'b1),
               .clk(clk));
 
     wire [CWIDTH-1:0] ctrl_X_pre;
-    REGISTER_R_CE #(.N(CWIDTH))
+    REGISTER_R #(.N(CWIDTH))
     ctrl_ID_X (.q(ctrl_X_pre),
                .d(ctrl_ID),
                .rst(rst),
-               .ce(1'b1),
                .clk(clk));
 
     wire [DWIDTH-1:0] rs1_X;
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R #(.N(DWIDTH))
     rs1_ID_X (.q(rs1_X),
               //.d(rd1),
               .d(fwd_ID_rs1_res),
               .rst(rst),
-              .ce(1'b1),
               .clk(clk));
 
     wire [DWIDTH-1:0] rs2_X;
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R #(.N(DWIDTH))
     rs2_ID_X (.q(rs2_X),
               //.d(rd2),
               .d(fwd_ID_rs2_res),
               .rst(rst),
-              .ce(1'b1),
               .clk(clk));
 
     wire [DWIDTH-1:0] instr_X;
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R #(.N(DWIDTH))
     instr_ID_X (.q(instr_X),
                 .d(instr_ID),
                 .rst(rst),
-                .ce(1'b1),
                 .clk(clk));
 
     wire [DWIDTH-1:0] pc_X;
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R #(.N(DWIDTH))
     pc_ID_X (.q(pc_X),
 	         .d(pc_ID),
 	         .rst(rst),
-	         .ce(1'b1),
 	         .clk(clk));
 
     wire [DWIDTH-1:0] csr_uimm_X;
     wire [DWIDTH-1:0] csr_uimm_extend = {27'b0,instr_ID[19:15]};
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R #(.N(DWIDTH))
     csr_uImm_ID_X (.q(csr_uimm_X),
                    .d(csr_uimm_extend),
                    .rst(rst),
-                   .ce(1'b1),
                    .clk(clk));
 
     ////////////////////////////////////////////////////
@@ -442,8 +432,7 @@ module cpu #(
     assign uart_store_selected = ((alu_res_X == 32'h80000008) && (instr_X[6:0] == `OPC_STORE));
     assign uart_tx_data_in_valid = uart_store_selected;                                                  // TODO: Drives uart at X stage --> check with TAs is incorrect / need to drive at WB stage?
     wire ctr_reset = (alu_res_X == 32'h80000018);
-
-
+    //wire ctr_reset = 1'b0;
     // PC select unit, based on the previous (jal vs non-jal) and current (jalr or branch) result. This result propagates to WB   
     wire [1:0] pc_sel_x;
     pc_sel_unit
@@ -489,44 +478,39 @@ module cpu #(
     //
     ////////////////////////////////////////////////////
     wire bubble_inside_wb;
-    REGISTER_R_CE #(.N(1), .INIT(1'b0))
+    REGISTER_R #(.N(1), .INIT(1'b0))
     bubble_X_WB (.q(bubble_inside_wb),
                  .d(bubble_inside),
                  .rst(rst),
-                 .ce(1'b1),
                  .clk(clk));
 
     wire [1:0] pc_select_WB;
-    REGISTER_R_CE #(.N(2))
+    REGISTER_R #(.N(2))
     pc_select_X_WB (.q(pc_select_WB),
                     .d(pc_sel_x),
                     .rst(rst),
-                    .ce(1'b1),
                     .clk(clk));
     assign pc_select_jalrb_WB = pc_select_WB; 
 
     wire [DWIDTH-1:0] alu_res_WB;
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R #(.N(DWIDTH))
     alu_X_WB (.q(alu_res_WB),
               .d(alu_res_X),
               .rst(rst),
-              .ce(1'b1),
               .clk(clk));
      
     wire [CWIDTH-1:0] ctrl_WB;
-    REGISTER_R_CE #(.N(CWIDTH))
+    REGISTER_R #(.N(CWIDTH))
     ctrl_X_WB (.q(ctrl_WB),
                .d(ctrl_X),
                .rst(rst),
-               .ce(1'b1),
                .clk(clk));
      
     wire [DWIDTH-1:0] instr_WB;
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R #(.N(DWIDTH))
     instr_X_WB (.q(instr_WB),
                 .d(instr_X),
                 .rst(rst),
-                .ce(1'b1),
                 .clk(clk));
 
     // CSR after X, commit point past-WB stage, currently works without
@@ -539,11 +523,10 @@ module cpu #(
     //          .clk(clk));
 
     wire [DWIDTH-1:0] pc_WB;
-    REGISTER_R_CE #(.N(DWIDTH))
+    REGISTER_R #(.N(DWIDTH))
     pc_X_WB (.q(pc_WB),
              .d(pc_X),
              .rst(rst),
-             .ce(1'b1),
              .clk(clk));
 
     ////////////////////////////////////////////////////
@@ -559,11 +542,10 @@ module cpu #(
     // Cycle Counter
     wire [DWIDTH-1:0] cycle_counter_d;
     wire [DWIDTH-1:0] cycle_counter_q;
-    REGISTER_R_CE #(.N(DWIDTH), .INIT(32'd0))
+    REGISTER_R #(.N(DWIDTH), .INIT(32'd0))
     cyc_ctr (.q(cycle_counter_q),
              .d(cycle_counter_d),
              .rst(ctr_reset || rst),
-             .ce(1'b1),
              .clk(clk));
     assign cycle_counter_d = cycle_counter_q + 1;
     // Instruction Counter
