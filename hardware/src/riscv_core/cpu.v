@@ -437,7 +437,7 @@ module cpu #(
 
     assign uart_store_selected = ((alu_res_X == 32'h80000008) && (instr_X[6:0] == `OPC_STORE));
     assign uart_tx_data_in_valid = uart_store_selected;                                                  // TODO: Drives uart at X stage --> check with TAs is incorrect / need to drive at WB stage?
-    wire ctr_reset = (alu_res_X == 32'h80000018);
+    wire ctr_reset = (alu_res_X == 32'h80000018) && instr_X[6:0] == `OPC_STORE;
     //wire ctr_reset = 1'b0;
     // PC select unit, based on the previous (jal vs non-jal) and current (jalr or branch) result. This result propagates to WB   
     wire [1:0] pc_sel_x;
