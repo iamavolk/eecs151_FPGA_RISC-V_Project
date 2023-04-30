@@ -18,8 +18,7 @@ module cpu #(
     localparam CWIDTH = 16;
     localparam ROM_IDX_WIDTH = 6;
     localparam CTRL_KILL = 16'b0;
-    localparam HJAL = 16'h2069;
-    localparam HJALR = 16'h2041;
+
     localparam HCLEAR = 16'h0;
     
     // BIOS Memory
@@ -178,9 +177,9 @@ module cpu #(
     wire [DWIDTH-1:0] pc_ID;
     REGISTER_R #(.N(DWIDTH))
     pc_IF_ID (.q(pc_ID),
-	          .d(pc_IF),
-	          .rst(rst),
-	          .clk(clk));
+              .d(pc_IF),
+	      .rst(rst),
+	      .clk(clk));
 
     assign imem_addrb = pc_IF[15:2];
     assign bios_addra = pc_IF[13:2];
@@ -203,7 +202,11 @@ module cpu #(
                      .instr_kill_res(instr_kill_control));
 
     // Handling consistency immediately after reset
-    wire instr_kill = ((pc_IF == 32'h10000000) || (pc_IF == 32'h0) || (pc_IF == 32'h40000000) || instr_kill_control);
+    wire instr_kill = ((pc_IF == 32'h10000000)
+			|| (pc_IF == 32'h00000000)
+			|| (pc_IF == 32'h40000000)
+			|| instr_kill_control);
+
     wire [DWIDTH-1:0] instr_ID;
     mux2 #(.N(DWIDTH))
     instr_kill_mux (.in0(instr_IF),
@@ -274,7 +277,7 @@ module cpu #(
                    .pc(pc_ID),
 		           .jal_pc(jal_select));
 
-    wire [1:0] pc_sel_jal_ID = (ctrl_ID == HJAL) ? 2'b01 : 2'b00;
+    wire [1:0] pc_sel_jal_ID = (instr_ID[6:0] == `OPC_JAL) ? 2'b01 : 2'b00;
 
     ////////////////////////////////////////////////////
     //

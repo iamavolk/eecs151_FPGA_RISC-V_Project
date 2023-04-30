@@ -10,12 +10,21 @@ module alu #(
 );
 
 reg [N-1:0] res;
+wire msb_a = A[N-1];
+wire msb_b = B[N-1];
 always @(*) begin
     case (ALUSel)
         4'b0000: res = A + B;               // add
         4'b0001: res = A << B[4:0];         // sll
         4'b0011: res = {{N-1{1'b0}}, (A < B)};
         4'b0010: res = {{N-1{1'b0}}, ($signed(A) < $signed(B))};
+		//begin
+		//    if (msb_a && msb_b) res = {{N-1{1'b0}}, (A < B)};
+		//    else if (msb_a && ~msb_b) res = {{N-1{1'b0}}, 1'b1};
+		//    else if (~msb_a && msb_b) res = {{N-1{1'b0}}, 1'b0};
+		//    else if (~msb_a && ~msb_b) res = {{N-1{1'b0}}, (A < B)};
+		//    else res = {N{1'b0}};
+		//end
         4'b0100: res = A ^ B;                           // xor
         4'b0101: res = A >> B[4:0];                     // srl
         4'b0110: res = A | B;                           // or
