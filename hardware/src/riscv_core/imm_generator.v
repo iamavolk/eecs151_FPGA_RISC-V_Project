@@ -1,3 +1,4 @@
+`include "opcode.vh"
 module imm_generator #(
     parameter N = 32
 )
@@ -7,11 +8,6 @@ module imm_generator #(
 
     output [N-1:0] imm
 );
-    //localparam SLTIU_OPCODE = 7'b0010011;
-    localparam SLTIU_FUNC3 = 3'b011;
-    // I* type params
-    localparam SLLI_FUNC3 = 3'b001;
-    localparam SRI_FUNC3 = 3'b101;
     wire [2:0] func3 = instr[14:12];
     wire opcode_s_l = instr[4]; // 1 for shift, 0 for load
 
@@ -35,9 +31,9 @@ wire [N-1:0] b_type =
 	1'b0};
 
 wire [N-1:0] i_type_ext =
-	((func3 == SLTIU_FUNC3) && opcode_s_l)?
-	{{N-12{instr[31]}}, i_type} :                                    // SLTIU check if sign ext. ?
-	((func3 == SLLI_FUNC3 || func3 == SRI_FUNC3) && opcode_s_l ?
+	((func3 == `FNC_SLTU) && opcode_s_l)?
+	{{N-12{instr[31]}}, i_type} :
+	((func3 == `FNC_SLL || func3 == `FNC_SRL_SRA) && opcode_s_l ?
 	{{N-5{1'b0}}, i_star_type} :
 	{{N-12{instr[31]}}, i_type});
 

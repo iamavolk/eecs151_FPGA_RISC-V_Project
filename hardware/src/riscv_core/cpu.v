@@ -443,6 +443,8 @@ module cpu #(
     wire [1:0] pc_sel_x;
     pc_sel_unit
     pc_select_unit (.instr_hex(ctrl_X),
+		    .opcode(instr_X[6:0]),
+		    .func3(instr_X[14:12]),
                     .pc_sel_id(pc_sel_jal_ID),
                     .BrEq(BrEq),
                     .BrLt(BrLt),

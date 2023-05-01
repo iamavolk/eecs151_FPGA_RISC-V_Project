@@ -35,6 +35,7 @@ always @(*) begin
         // 4'b1011: // mulhu
         4'b1100: res = A - B;                           // sub
         4'b1101: res = $signed(A) >>> B[4:0];  		// sra, TODO: arithmetic shift?????
+		//res = (A >> B[4:0]) + {{B[4:0]{A[N-1]}}, {(6'd32-B[4:0]){1'b0}}};
         4'b1111: res = B;                               // bsel  
         default: res = {N{1'b0}};
     endcase
