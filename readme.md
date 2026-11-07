@@ -1,11 +1,11 @@
 # Four-Stage RISC-V pipelined design
 <br>
 
-- Design features: fully bypassed, early branch target resolution
-- RTL: Verilog (IEEE-1364 2001/2005 style)
-- Target platform: Xilinx Zynq 7020 on PYNQ Z1
-- Verification: directed and ad-hoc co-simulation with reference models
-- I/O: UART tx/rx, syncronizer (CDC) + debouncer (pressing buttons on the board is an exciting activity)
+- Design features: 4 stages (IF, ID, X, MW), fully bypassed, early branch target resolution
+- RTL: Verilog (IEEE-1364 syntax)
+- Target platform: Xilinx Zynq 7020
+- Verification: directed co-simulation with reference models, assembly tests, and riscv test suites
+- I/O: UART tx/rx, synchronizer (async user input) + debouncer (pressing buttons on the board is an exciting activity)
 - BIOS, asm and C test suites, CSRs
 <br>
 
